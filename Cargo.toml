@@ -1,0 +1,12 @@
+[package]
+name = "mrz_parser"
+version = "0.1.0"
+authors = ["Your Name <you@example.com>"]
+edition = "2021"
+description = "A compliance-ready MRZ (Machine Readable Zone) parsing library."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourname/mrz_parser"
+documentation = "https://docs.rs/mrz_parser"
+readme = "README.md"
+keywords = ["mrz", "parser", "passport", "id", "compliance"]
+categories = ["parser-implementations", "authentication"]
