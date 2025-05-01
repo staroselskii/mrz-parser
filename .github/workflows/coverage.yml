@@ -2,17 +2,16 @@ name: Coverage
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   coverage:
-    name: Run test coverage with tarpaulin
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Rust
@@ -21,19 +20,17 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Install tarpaulin
-        run: cargo install cargo-tarpaulin
+      - name: Run Tarpaulin coverage via Docker
+        run: |
+          docker run --security-opt seccomp=unconfined \
+            -v "$(pwd)":/volume \
+            xd009642/tarpaulin \
+            cargo tarpaulin --out Xml --output-dir coverage
 
-      - name: Run tests with coverage
-        run: cargo tarpaulin --out Xml --output-dir coverage
-
-      - name: List coverage directory
-        run: ls -lh coverage
-
-      - name: Upload to Codecov
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage/cobertura.xml
-          slug: staroselskii/mrz-parser
+          files: ./coverage/cobertura.xml
           fail_ci_if_error: true
+
