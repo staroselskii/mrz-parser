@@ -24,24 +24,24 @@ pub enum MRZParseError {
 }
 
 /// Represents parsed MRZ data.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MRZData {
     /// Document type (e.g., P for Passport).
-    pub document_type: String,
+    pub document_type: Option<String>,
     /// Issuing country code (ISO-3166-1 alpha-3).
-    pub issuing_country: String,
+    pub issuing_country: Option<String>,
     /// Tuple of (surname, given names).
-    pub names: (String, String),
+    pub names: Option<(String, String)>,
     /// Passport number field.
-    pub passport_number: String,
+    pub passport_number: Option<String>,
     /// Nationality country code.
-    pub nationality: String,
+    pub nationality: Option<String>,
     /// Date of birth (YYMMDD format).
-    pub birth_date: String,
+    pub birth_date: Option<String>,
     /// Sex (M, F, or < for unspecified).
-    pub sex: String,
+    pub sex: Option<String>,
     /// Expiration date of the document (YYMMDD format).
-    pub expiry_date: String,
+    pub expiry_date: Option<String>,
 }
 
 pub mod parser;

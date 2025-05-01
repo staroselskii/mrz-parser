@@ -19,69 +19,62 @@ pub fn parse_td3_mrz_strict(
         return Err(MRZParseError::InvalidFormat);
     }
 
-    let line1 = lines[0];
-    let line2 = lines[1];
+    let line1 = normalize_field(lines[0]);
+    let line2 = normalize_field(lines[1]);
 
     if line1.len() != 44 || line2.len() != 44 {
         return Err(MRZParseError::InvalidFormat);
     }
 
-    let document_type = &line1[0..1];
-    if !is_valid_alphanumeric(document_type) {
-        return Err(MRZParseError::FieldError("Invalid document type"));
-    }
+    let document_type = Some(line1[0..1].to_string());
 
-    let issuing_country = &line1[2..5];
-    if !issuing_country.chars().all(|c| c.is_ascii_uppercase()) {
-        return Err(MRZParseError::FieldError("Invalid issuing country"));
-    }
+    let issuing_country = Some(line1[2..5].to_string());
 
-    let names = parse_names(&line1[5..44])?;
+    let names = parse_names(&line1[5..44]).ok();
 
     let passport_number_raw = &line2[0..9];
     let passport_number_checksum = line2
         .chars()
         .nth(9)
         .ok_or(MRZParseError::FieldError("Missing passport checksum"))?;
-    let passport_number = validate_passport_number(passport_number_raw, passport_number_checksum)?;
+    let passport_number =
+        validate_passport_number(passport_number_raw, passport_number_checksum).ok();
 
-    let nationality = &line2[10..13];
-    if !nationality.chars().all(|c| c.is_ascii_uppercase()) {
-        return Err(MRZParseError::FieldError("Invalid nationality"));
-    }
+    let nationality = Some(line2[10..13].to_string());
 
     let birth_date_raw = &line2[13..19];
     let birth_date_checksum = line2
         .chars()
         .nth(19)
         .ok_or(MRZParseError::FieldError("Missing birth date checksum"))?;
-    validate_numeric_field_with_checksum(birth_date_raw, birth_date_checksum)?;
+    let birth_date = validate_numeric_field_with_checksum(birth_date_raw, birth_date_checksum)
+        .ok()
+        .map(|_| birth_date_raw.to_string());
 
-    let sex = &line2[20..21];
-    if !(sex == "M" || sex == "F" || sex == "<") {
-        return Err(MRZParseError::FieldError("Invalid sex field"));
-    }
+    let sex = Some(line2[20..21].to_string());
 
     let expiry_date_raw = &line2[21..27];
     let expiry_date_checksum = line2
         .chars()
         .nth(27)
         .ok_or(MRZParseError::FieldError("Missing expiry date checksum"))?;
-    validate_numeric_field_with_checksum(expiry_date_raw, expiry_date_checksum)?;
+    let expiry_date = validate_numeric_field_with_checksum(expiry_date_raw, expiry_date_checksum)
+        .ok()
+        .map(|_| expiry_date_raw.to_string());
 
     if options.validate_final_checksum {
-        validate_final_checksum(line2)?;
+        validate_final_checksum(&line2)?;
     }
 
     Ok(MRZData {
-        document_type: document_type.to_string(),
-        issuing_country: issuing_country.to_string(),
+        document_type,
+        issuing_country,
         names,
         passport_number,
-        nationality: nationality.to_string(),
-        birth_date: normalize_field(birth_date_raw),
-        sex: sex.to_string(),
-        expiry_date: normalize_field(expiry_date_raw),
+        nationality,
+        birth_date,
+        sex,
+        expiry_date,
     })
 }
 
