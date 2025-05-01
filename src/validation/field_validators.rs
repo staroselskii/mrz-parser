@@ -2,7 +2,9 @@
 
 /// Checks if the input field contains only valid MRZ alphanumeric characters.
 pub fn is_valid_alphanumeric(field: &str) -> bool {
-    field.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '<')
+    field
+        .chars()
+        .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '<')
 }
 
 /// Checks if the input field contains only numeric digits.

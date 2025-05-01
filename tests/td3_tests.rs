@@ -41,7 +41,13 @@ fn test_invalid_td3_checksum_errors() {
         "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<<<<", // <-- good line
         "L898902C36UTO7408122F1204159ZE184226B<<<<<11",    // <-- broken final checksum
     ];
-    assert!(parse_mrz_with_options(&lines, ParseOptions { validate_final_checksum: true }).is_err());
+    assert!(parse_mrz_with_options(
+        &lines,
+        ParseOptions {
+            validate_final_checksum: true
+        }
+    )
+    .is_err());
 }
 
 #[test]
@@ -52,7 +58,13 @@ fn test_strict_final_checksum_validation() {
     ];
 
     // Normal parse: should succeed
-    assert!(parse_mrz_with_options(&lines, ParseOptions { validate_final_checksum: true }).is_ok());
+    assert!(parse_mrz_with_options(
+        &lines,
+        ParseOptions {
+            validate_final_checksum: true
+        }
+    )
+    .is_ok());
 
     // Strict parse: should succeed
     let options = ParseOptions {
@@ -77,4 +89,3 @@ fn test_strict_final_checksum_failure() {
     };
     assert!(parse_mrz_with_options(&broken_lines, options).is_err());
 }
-

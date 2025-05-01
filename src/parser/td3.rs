@@ -3,13 +3,18 @@
 //! Provides strict parsing with validation and checksum verification.
 
 use crate::validation::checksum::calculate_mrz_checksum;
-use crate::validation::field_validators::{is_valid_alphanumeric, is_valid_numeric, normalize_field};
+use crate::validation::field_validators::{
+    is_valid_alphanumeric, is_valid_numeric, normalize_field,
+};
 use crate::{MRZData, MRZParseError, ParseOptions};
 
 /// Strict parser for TD3 MRZ (Passport) format.
 ///
 /// Validates each field strictly, including checksum verification.
-pub fn parse_td3_mrz_strict(lines: &[&str], options: ParseOptions) -> Result<MRZData, MRZParseError> {
+pub fn parse_td3_mrz_strict(
+    lines: &[&str],
+    options: ParseOptions,
+) -> Result<MRZData, MRZParseError> {
     if lines.len() != 2 {
         return Err(MRZParseError::InvalidFormat);
     }
@@ -34,7 +39,10 @@ pub fn parse_td3_mrz_strict(lines: &[&str], options: ParseOptions) -> Result<MRZ
     let names = parse_names(&line1[5..44])?;
 
     let passport_number_raw = &line2[0..9];
-    let passport_number_checksum = line2.chars().nth(9).ok_or(MRZParseError::FieldError("Missing passport checksum"))?;
+    let passport_number_checksum = line2
+        .chars()
+        .nth(9)
+        .ok_or(MRZParseError::FieldError("Missing passport checksum"))?;
     let passport_number = validate_passport_number(passport_number_raw, passport_number_checksum)?;
 
     let nationality = &line2[10..13];
@@ -43,7 +51,10 @@ pub fn parse_td3_mrz_strict(lines: &[&str], options: ParseOptions) -> Result<MRZ
     }
 
     let birth_date_raw = &line2[13..19];
-    let birth_date_checksum = line2.chars().nth(19).ok_or(MRZParseError::FieldError("Missing birth date checksum"))?;
+    let birth_date_checksum = line2
+        .chars()
+        .nth(19)
+        .ok_or(MRZParseError::FieldError("Missing birth date checksum"))?;
     validate_numeric_field_with_checksum(birth_date_raw, birth_date_checksum)?;
 
     let sex = &line2[20..21];
@@ -52,11 +63,14 @@ pub fn parse_td3_mrz_strict(lines: &[&str], options: ParseOptions) -> Result<MRZ
     }
 
     let expiry_date_raw = &line2[21..27];
-    let expiry_date_checksum = line2.chars().nth(27).ok_or(MRZParseError::FieldError("Missing expiry date checksum"))?;
+    let expiry_date_checksum = line2
+        .chars()
+        .nth(27)
+        .ok_or(MRZParseError::FieldError("Missing expiry date checksum"))?;
     validate_numeric_field_with_checksum(expiry_date_raw, expiry_date_checksum)?;
 
     if options.validate_final_checksum {
-        validate_final_checksum(&line2)?;
+        validate_final_checksum(line2)?;
     }
 
     Ok(MRZData {
@@ -73,8 +87,12 @@ pub fn parse_td3_mrz_strict(lines: &[&str], options: ParseOptions) -> Result<MRZ
 
 fn parse_names(name_field: &str) -> Result<(String, String), MRZParseError> {
     let mut parts = name_field.splitn(2, "<<");
-    let surname = parts.next().ok_or(MRZParseError::FieldError("Missing surname"))?;
-    let given = parts.next().ok_or(MRZParseError::FieldError("Missing given names"))?;
+    let surname = parts
+        .next()
+        .ok_or(MRZParseError::FieldError("Missing surname"))?;
+    let given = parts
+        .next()
+        .ok_or(MRZParseError::FieldError("Missing given names"))?;
 
     let surname = surname.replace('<', " ").trim().to_string();
     let given_names = given.replace('<', " ").trim().to_string();
@@ -82,27 +100,34 @@ fn parse_names(name_field: &str) -> Result<(String, String), MRZParseError> {
     Ok((surname, given_names))
 }
 
-fn name_field_part_to_string(part: &str) -> String {
-    part.replace('<', " ").trim().to_string()
-}
-
 fn validate_passport_number(field: &str, checksum_char: char) -> Result<String, MRZParseError> {
     if !is_valid_alphanumeric(field) {
-        return Err(MRZParseError::FieldError("Invalid passport number characters"));
+        return Err(MRZParseError::FieldError(
+            "Invalid passport number characters",
+        ));
     }
-    let expected_checksum = checksum_char.to_digit(10)
-        .ok_or(MRZParseError::FieldError("Invalid passport number checksum character"))?;
+    let expected_checksum = checksum_char.to_digit(10).ok_or(MRZParseError::FieldError(
+        "Invalid passport number checksum character",
+    ))?;
     if calculate_mrz_checksum(field) != expected_checksum {
-        return Err(MRZParseError::FieldError("Passport number checksum mismatch"));
+        return Err(MRZParseError::FieldError(
+            "Passport number checksum mismatch",
+        ));
     }
     Ok(normalize_field(field))
 }
 
-fn validate_numeric_field_with_checksum(field: &str, checksum_char: char) -> Result<(), MRZParseError> {
+fn validate_numeric_field_with_checksum(
+    field: &str,
+    checksum_char: char,
+) -> Result<(), MRZParseError> {
     if !is_valid_numeric(field) {
-        return Err(MRZParseError::FieldError("Invalid numeric field characters"));
+        return Err(MRZParseError::FieldError(
+            "Invalid numeric field characters",
+        ));
     }
-    let expected_checksum = checksum_char.to_digit(10)
+    let expected_checksum = checksum_char
+        .to_digit(10)
         .ok_or(MRZParseError::FieldError("Invalid checksum character"))?;
     if calculate_mrz_checksum(field) != expected_checksum {
         return Err(MRZParseError::FieldError("Field checksum mismatch"));
@@ -117,10 +142,16 @@ fn validate_final_checksum(line2: &str) -> Result<(), MRZParseError> {
     data.push_str(&line2[13..20]); // birthdate + checksum
     data.push_str(&line2[21..43]); // expiry date + personal number
 
-    let expected_checksum = line2.chars().nth(43)
-        .ok_or(MRZParseError::FieldError("Missing final checksum character"))?
+    let expected_checksum = line2
+        .chars()
+        .nth(43)
+        .ok_or(MRZParseError::FieldError(
+            "Missing final checksum character",
+        ))?
         .to_digit(10)
-        .ok_or(MRZParseError::FieldError("Invalid final checksum character"))?;
+        .ok_or(MRZParseError::FieldError(
+            "Invalid final checksum character",
+        ))?;
 
     let calculated = calculate_mrz_checksum(&data);
 

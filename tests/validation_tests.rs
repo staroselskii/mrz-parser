@@ -1,5 +1,5 @@
-use mrz_parser::validation::field_validators::*;
 use mrz_parser::validation::checksum::calculate_mrz_checksum;
+use mrz_parser::validation::field_validators::*;
 
 #[test]
 fn test_alphanumeric_validation() {

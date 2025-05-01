@@ -6,7 +6,8 @@ pub fn calculate_mrz_checksum(data: &str) -> u32 {
     data.chars()
         .zip(weights.iter().cycle())
         .map(|(c, w)| char_value(c) * w)
-        .sum::<u32>() % 10
+        .sum::<u32>()
+        % 10
 }
 
 /// Helper function to convert MRZ character to numeric value.

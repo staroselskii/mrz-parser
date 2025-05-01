@@ -3,19 +3,13 @@
 
 #![deny(missing_docs)]
 
+use std::default::*;
+
 /// Parsing options for MRZ parsing.
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct ParseOptions {
     /// Whether to strictly validate the final overall checksum.
     pub validate_final_checksum: bool,
-}
-
-impl Default for ParseOptions {
-    fn default() -> Self {
-        Self {
-            validate_final_checksum: false,
-        }
-    }
 }
 
 /// Errors that can occur during MRZ parsing.
@@ -70,8 +64,11 @@ pub fn parse_mrz(lines: &[&str]) -> Result<MRZData, MRZParseError> {
 }
 
 /// Parses MRZ input with custom options.
-pub fn parse_mrz_with_options(lines: &[&str], options: ParseOptions) -> Result<MRZData, MRZParseError> {
-    match (lines.len(), lines.get(0).map(|l| l.len())) {
+pub fn parse_mrz_with_options(
+    lines: &[&str],
+    options: ParseOptions,
+) -> Result<MRZData, MRZParseError> {
+    match (lines.len(), lines.first().map(|l| l.len())) {
         (2, Some(44)) => parser::td3::parse_td3_mrz_strict(lines, options),
         _ => Err(MRZParseError::InvalidFormat),
     }
