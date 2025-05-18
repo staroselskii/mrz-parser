@@ -1,11 +1,11 @@
-use heapless::String;
 use crate::{
-    ParsedMRZ, MRZICAO, MRZBCBP, MRZFormat, MRZParseError,
-    MAX_NAME_LEN, MAX_DOC_NUM_LEN, MAX_FLIGHT_NUM_LEN, MAX_SEAT_LEN,
+    MRZFormat, MRZParseError, ParsedMRZ, MAX_DOC_NUM_LEN, MAX_FLIGHT_NUM_LEN, MAX_NAME_LEN,
+    MAX_SEAT_LEN, MRZBCBP, MRZICAO,
 };
+use heapless::String;
 
 pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
-    if lines.len() == 2 && lines[0].len() == 44 && lines[1].len() == 44 && lines[0].starts_with(b"P<") {
+    if lines.len() == 2 && lines[0].starts_with(b"P<") {
         MRZFormat::ICAO
     } else if lines.len() == 1 && lines[0].starts_with(b"M1") {
         MRZFormat::BCBP
@@ -17,7 +17,7 @@ pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
 pub fn parse_any(lines: &[&[u8]]) -> Result<ParsedMRZ, MRZParseError> {
     match detect_format(lines) {
         MRZFormat::ICAO => {
-            if lines.len() != 2 || lines[0].len() < 44 || lines[1].len() < 44 {
+            if lines[0].len() < 44 || lines[1].len() < 44 {
                 return Err(MRZParseError::InvalidLength);
             }
             Ok(parse_icao(lines[0], lines[1]))

@@ -1,4 +1,4 @@
-use mrz_core::{parser::parse_any, ParsedMRZ, MRZParseError};
+use mrz_core::{parser::parse_any, MRZParseError, ParsedMRZ};
 use time::{Date, Month};
 
 #[derive(Debug)]
@@ -28,27 +28,26 @@ pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
     let parsed = parse_any(&lines_bytes)?;
 
     match parsed {
-        ParsedMRZ::ICAO(raw) => {
-            Ok(MRZ::ICAO(MRZICAO {
-                document_number: raw.document_number.to_string(),
-                name: raw.name.to_string(),
-                birth_date: parse_mrz_date(&raw.birth_date),
-                expiry_date: parse_mrz_date(&raw.expiry_date),
-            }))
-        }
-        ParsedMRZ::BCBP(raw) => {
-            Ok(MRZ::BCBP(MRZBCBP {
-                passenger_name: parse_field(&raw.passenger_name),
-                flight_number: parse_field(&raw.flight_number),
-                seat: parse_field(&raw.seat),
-            }))
-        }
+        ParsedMRZ::ICAO(raw) => Ok(MRZ::ICAO(MRZICAO {
+            document_number: raw.document_number.to_string(),
+            name: raw.name.to_string(),
+            birth_date: parse_mrz_date(&raw.birth_date),
+            expiry_date: parse_mrz_date(&raw.expiry_date),
+        })),
+        ParsedMRZ::BCBP(raw) => Ok(MRZ::BCBP(MRZBCBP {
+            passenger_name: parse_field(&raw.passenger_name),
+            flight_number: parse_field(&raw.flight_number),
+            seat: parse_field(&raw.seat),
+        })),
         ParsedMRZ::Unknown => Ok(MRZ::Unknown),
     }
 }
 
 fn parse_field(bytes: &[u8]) -> String {
-    core::str::from_utf8(bytes).unwrap_or("").trim_end_matches('<').to_string()
+    core::str::from_utf8(bytes)
+        .unwrap_or("")
+        .trim_end_matches('<')
+        .to_string()
 }
 
 pub fn parse_mrz_date(raw: &[u8; 6]) -> Option<Date> {

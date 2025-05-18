@@ -1,0 +1,18 @@
+[package]
+name = "mrz-parser"
+version = "0.1.0"
+edition = "2021"
+description = "A modular, no_std-compatible MRZ (Machine Readable Zone) parser for passports, ID cards, and boarding passes."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/staroselskii/mrz-parser"
+readme = "../README.md"
+keywords = ["mrz", "parser", "passport", "id", "boardingpass"]
+categories = ["parser-implementations", "authentication"]
+
+[dependencies]
+mrz-core = { path = "../mrz-core", default-features = false }
+mrz-host = { path = "../mrz-host", optional = true }
+
+[features]
+default = ["std"]
+std = ["mrz-core/std", "mrz-host"]

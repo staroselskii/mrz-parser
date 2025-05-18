@@ -1,5 +1,5 @@
 use mrz_core::parser::parse_any;
-use mrz_core::{ParsedMRZ, MRZParseError};
+use mrz_core::MRZParseError;
 
 #[test]
 fn test_invalid_format() {
