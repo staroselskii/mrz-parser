@@ -1,7 +1,4 @@
-use crate::{
-    MRZFormat, MRZParseError, ParsedMRZ, MAX_DOC_NUM_LEN, MAX_FLIGHT_NUM_LEN, MAX_NAME_LEN,
-    MAX_SEAT_LEN, MRZBCBP, MRZICAO,
-};
+use crate::{MRZFormat, MRZParseError, ParsedMRZ, MAX_DOC_NUM_LEN, MAX_NAME_LEN, MRZICAO};
 use heapless::String;
 
 pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
@@ -30,7 +27,7 @@ pub fn parse_any(lines: &[&[u8]]) -> Result<ParsedMRZ, MRZParseError> {
             if lines[0].len() < 30 {
                 return Err(MRZParseError::InvalidLength);
             }
-            Ok(parse_bcbp(lines[0]))
+            return Err(MRZParseError::UnsupportedFormat);
         }
         MRZFormat::Unknown => Err(MRZParseError::UnknownFormat),
     }
@@ -62,21 +59,5 @@ fn parse_icao(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
         name,
         birth_date: birth_date.try_into().unwrap_or([b'0'; 6]),
         expiry_date: expiry_date.try_into().unwrap_or([b'0'; 6]),
-    })
-}
-
-fn parse_bcbp(line: &[u8]) -> ParsedMRZ {
-    let mut passenger_name = [b'<'; MAX_NAME_LEN];
-    let mut flight_number = [b'<'; MAX_FLIGHT_NUM_LEN];
-    let mut seat = [b'<'; MAX_SEAT_LEN];
-
-    passenger_name[..18].copy_from_slice(&line[2..20]);
-    flight_number[..6].copy_from_slice(&line[23..29]);
-    seat[..4].copy_from_slice(&line[35..39]);
-
-    ParsedMRZ::BCBP(MRZBCBP {
-        passenger_name,
-        flight_number,
-        seat,
     })
 }

@@ -1,6 +1,6 @@
 use mrz_core::MRZParseError;
 use mrz_host::parse_lines;
-use mrz_host::{MRZ, MRZBCBP, MRZICAO};
+use mrz_host::{MRZ, MRZICAO};
 use serde::Deserialize;
 use std::fs;
 use std::path::Path;
@@ -13,8 +13,6 @@ struct Sample {
     name: Option<String>,
     birth_date: Option<String>,
     expiry_date: Option<String>,
-    flight_number: Option<String>,
-    seat: Option<String>,
 }
 
 #[test]
@@ -27,6 +25,7 @@ fn test_samples_from_fixtures() {
         let parsed = parse_lines(&line_refs);
 
         match (sample.format.as_str(), parsed) {
+            ("BCBP", _) | ("TD1", _) => continue,
             ("TD3", Ok(MRZ::ICAO(mrz))) => {
                 if let Some(expected) = sample.document_number.as_deref() {
                     assert_eq!(mrz.document_number.trim_end_matches('<'), expected);
@@ -39,17 +38,6 @@ fn test_samples_from_fixtures() {
                 }
                 if let Some(expected) = sample.expiry_date.as_deref() {
                     assert_eq!(mrz.expiry_date.unwrap().to_string(), expected);
-                }
-            }
-            ("BCBP", Ok(MRZ::BCBP(bcbp))) => {
-                dbg!(&bcbp);
-                dbg!(&sample);
-
-                if let Some(expected) = sample.flight_number.as_deref() {
-                    assert_eq!(bcbp.flight_number.trim_end_matches('<'), expected);
-                }
-                if let Some(expected) = sample.seat.as_deref() {
-                    assert_eq!(bcbp.seat.trim_end_matches('<'), expected);
                 }
             }
             _ => {

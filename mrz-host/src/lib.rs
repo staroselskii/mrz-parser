@@ -4,7 +4,6 @@ use time::{Date, Month};
 #[derive(Debug)]
 pub enum MRZ {
     ICAO(MRZICAO),
-    BCBP(MRZBCBP),
     Unknown,
 }
 
@@ -14,13 +13,6 @@ pub struct MRZICAO {
     pub name: String,
     pub birth_date: Option<Date>,
     pub expiry_date: Option<Date>,
-}
-
-#[derive(Debug)]
-pub struct MRZBCBP {
-    pub passenger_name: String,
-    pub flight_number: String,
-    pub seat: String,
 }
 
 fn normalize_lines(lines: &[&str]) -> Vec<Vec<u8>> {
@@ -53,11 +45,6 @@ pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
             name: raw.name.to_string(),
             birth_date: parse_mrz_date(&raw.birth_date),
             expiry_date: parse_mrz_date(&raw.expiry_date),
-        })),
-        ParsedMRZ::BCBP(raw) => Ok(MRZ::BCBP(MRZBCBP {
-            passenger_name: parse_field(&raw.passenger_name),
-            flight_number: parse_field(&raw.flight_number),
-            seat: parse_field(&raw.seat),
         })),
         ParsedMRZ::Unknown => Ok(MRZ::Unknown),
     }
