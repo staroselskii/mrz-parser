@@ -23,9 +23,29 @@ pub struct MRZBCBP {
     pub seat: String,
 }
 
+fn normalize_lines(lines: &[&str]) -> Vec<Vec<u8>> {
+    lines
+        .iter()
+        .map(|line| {
+            let mut bytes = line.as_bytes().to_vec();
+            let expected_len = match lines.len() {
+                2 => 44, // TD3
+                3 => 30, // TD1
+                1 => 60, // BCBP (can vary)
+                _ => 0,
+            };
+            while bytes.len() < expected_len {
+                bytes.push(b'<');
+            }
+            bytes
+        })
+        .collect()
+}
+
 pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
-    let lines_bytes: Vec<&[u8]> = lines.iter().map(|s| s.as_bytes()).collect();
-    let parsed = parse_any(&lines_bytes)?;
+    let normalized = normalize_lines(&lines);
+    let refs: Vec<&[u8]> = normalized.iter().map(|l| &l[..]).collect();
+    let parsed = parse_any(&refs)?;
 
     match parsed {
         ParsedMRZ::ICAO(raw) => Ok(MRZ::ICAO(MRZICAO {

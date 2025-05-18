@@ -5,7 +5,11 @@ use crate::{
 use heapless::String;
 
 pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
-    if lines.len() == 2 && lines[0].starts_with(b"P<") {
+    if lines.len() == 2
+        && lines[0].starts_with(b"P<")
+        && lines[0].len() >= 40
+        && lines[1].len() >= 40
+    {
         MRZFormat::ICAO
     } else if lines.len() == 1 && lines[0].starts_with(b"M1") {
         MRZFormat::BCBP
@@ -17,7 +21,7 @@ pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
 pub fn parse_any(lines: &[&[u8]]) -> Result<ParsedMRZ, MRZParseError> {
     match detect_format(lines) {
         MRZFormat::ICAO => {
-            if lines[0].len() < 44 || lines[1].len() < 44 {
+            if lines.len() != 2 || lines[0].len() < 44 || lines[1].len() < 44 {
                 return Err(MRZParseError::InvalidLength);
             }
             Ok(parse_icao(lines[0], lines[1]))
@@ -67,8 +71,8 @@ fn parse_bcbp(line: &[u8]) -> ParsedMRZ {
     let mut seat = [b'<'; MAX_SEAT_LEN];
 
     passenger_name[..18].copy_from_slice(&line[2..20]);
-    flight_number[..6].copy_from_slice(&line[20..26]);
-    seat[..4].copy_from_slice(&line[26..30]);
+    flight_number[..6].copy_from_slice(&line[23..29]);
+    seat[..4].copy_from_slice(&line[35..39]);
 
     ParsedMRZ::BCBP(MRZBCBP {
         passenger_name,
