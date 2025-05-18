@@ -1,0 +1,8 @@
+[package]
+name = "mrz-host"
+version = "0.1.0"
+edition = "2025"
+
+[dependencies]
+mrz-core = { path = "../mrz-core", features = ["std"] }
+time = { version = "0.3", features = ["macros"] }

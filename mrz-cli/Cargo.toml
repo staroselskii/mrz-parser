@@ -1,0 +1,8 @@
+[package]
+name = "mrz-cli"
+version = "0.1.0"
+edition = "2025"
+
+[dependencies]
+mrz-host = { path = "../mrz-host" }
+mrz-core = { path = "../mrz-core" }
