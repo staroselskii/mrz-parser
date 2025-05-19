@@ -4,6 +4,7 @@ use time::{Date, Month};
 #[derive(Debug)]
 pub enum MRZ {
     IcaoTd3(MrzIcaoTd3),
+    IcaoTd1(MrzIcaoTd1),
     Unknown,
 }
 
@@ -13,6 +14,23 @@ pub struct MrzIcaoTd3 {
     pub name: String,
     pub birth_date: Option<Date>,
     pub expiry_date: Option<Date>,
+}
+
+#[derive(Debug)]
+pub struct MrzIcaoTd1 {
+    pub document_code: String,
+    pub issuing_state: String,
+    pub name: String,
+    pub document_number: String,
+    pub nationality: String,
+    pub birth_date: Option<Date>,
+    pub birth_date_check: char,
+    pub sex: char,
+    pub expiry_date: Option<Date>,
+    pub expiry_date_check: char,
+    pub optional_data1: String,
+    pub optional_data2: String,
+    pub final_check: char,
 }
 
 fn normalize_lines(lines: &[&str]) -> Vec<Vec<u8>> {
@@ -45,6 +63,21 @@ pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
             name: raw.name.to_string(),
             birth_date: parse_mrz_date(&raw.birth_date),
             expiry_date: parse_mrz_date(&raw.expiry_date),
+        })),
+        ParsedMRZ::MrzIcaoTd1(raw) => Ok(MRZ::IcaoTd1(MrzIcaoTd1 {
+            document_code: parse_field(&raw.document_code),
+            issuing_state: parse_field(&raw.issuing_state),
+            name: raw.name.to_string(),
+            document_number: raw.document_number.to_string(),
+            nationality: parse_field(&raw.nationality),
+            birth_date: parse_mrz_date(&raw.birth_date),
+            birth_date_check: raw.birth_date_check as char,
+            sex: raw.sex as char,
+            expiry_date: parse_mrz_date(&raw.expiry_date),
+            expiry_date_check: raw.expiry_date_check as char,
+            optional_data1: raw.optional_data1.to_string(),
+            optional_data2: raw.optional_data2.to_string(),
+            final_check: raw.final_check.map(|b| b as char).unwrap_or('<'),
         })),
         ParsedMRZ::Unknown => Ok(MRZ::Unknown),
     }

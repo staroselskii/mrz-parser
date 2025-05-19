@@ -1,6 +1,6 @@
 use mrz_core::MRZParseError;
 use mrz_host::parse_lines;
-use mrz_host::{MRZ, MrzIcaoTd3};
+use mrz_host::{MrzIcaoTd3, MRZ};
 use serde::Deserialize;
 use std::fs;
 use std::path::Path;

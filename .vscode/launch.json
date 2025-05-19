@@ -1,15 +1,43 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-      {
-        "name": "Debug latest basic_tests",
-        "type": "lldb",
-        "request": "launch",
-        "program": "${workspaceFolder}/target/debug/td3_tests_latest",
-        "args": ["--nocapture"],
-        "cwd": "${workspaceFolder}",
-        "sourceLanguages": ["rust"]
-      }
-    ]
-  }
-  
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug mrz-cli",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/mrz-cli",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "sourceLanguages": ["rust"]
+    },
+    {
+      "name": "Run all tests",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["test"]
+      },
+      "args": ["--nocapture"],
+      "cwd": "${workspaceFolder}",
+      "sourceLanguages": ["rust"]
+    },
+    {
+      "name": "Debug integration tests (mrz-host)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/deps/integration-*",
+      "args": ["--nocapture"],
+      "cwd": "${workspaceFolder}",
+      "sourceLanguages": ["rust"]
+    },
+    {
+      "name": "Debug unit tests (mrz-core)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/deps/mrz_core-*",
+      "args": ["--nocapture"],
+      "cwd": "${workspaceFolder}",
+      "sourceLanguages": ["rust"]
+    }
+  ]
+}
