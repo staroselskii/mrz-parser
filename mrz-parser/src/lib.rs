@@ -6,5 +6,5 @@ pub use mrz_host::{
     parse_lines,
     parse_mrz_date,
     MRZ,     // Rich enum
-    MRZICAO, // Rich types
+    MrzIcaoTd3, // Rich types
 };

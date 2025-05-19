@@ -3,12 +3,12 @@ use time::{Date, Month};
 
 #[derive(Debug)]
 pub enum MRZ {
-    ICAO(MRZICAO),
+    IcaoTd3(MrzIcaoTd3),
     Unknown,
 }
 
 #[derive(Debug)]
-pub struct MRZICAO {
+pub struct MrzIcaoTd3 {
     pub document_number: String,
     pub name: String,
     pub birth_date: Option<Date>,
@@ -40,7 +40,7 @@ pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
     let parsed = parse_any(&refs)?;
 
     match parsed {
-        ParsedMRZ::ICAO(raw) => Ok(MRZ::ICAO(MRZICAO {
+        ParsedMRZ::MrzIcaoTd3(raw) => Ok(MRZ::IcaoTd3(MrzIcaoTd3 {
             document_number: raw.document_number.to_string(),
             name: raw.name.to_string(),
             birth_date: parse_mrz_date(&raw.birth_date),

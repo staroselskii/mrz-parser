@@ -1,4 +1,4 @@
-use crate::{MRZFormat, MRZParseError, ParsedMRZ, MAX_DOC_NUM_LEN, MAX_NAME_LEN, MRZICAO};
+use crate::{MRZFormat, MRZParseError, ParsedMRZ, ICAO_TD3_DOC_NUM_MAX_LEN, ICAO_TD3_NAME_MAX_LEN, MrzIcaoTd3};
 use heapless::String;
 
 pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
@@ -7,7 +7,9 @@ pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
         && lines[0].len() >= 40
         && lines[1].len() >= 40
     {
-        MRZFormat::ICAO
+        MRZFormat::MrzIcaoTd3 {
+            
+        }
     } else if lines.len() == 1 && lines[0].starts_with(b"M1") {
         MRZFormat::BCBP
     } else {
@@ -17,7 +19,7 @@ pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
 
 pub fn parse_any(lines: &[&[u8]]) -> Result<ParsedMRZ, MRZParseError> {
     match detect_format(lines) {
-        MRZFormat::ICAO => {
+        MRZFormat::MrzIcaoTd3 => {
             if lines.len() != 2 || lines[0].len() < 44 || lines[1].len() < 44 {
                 return Err(MRZParseError::InvalidLength);
             }
@@ -38,8 +40,8 @@ fn parse_icao(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
     let birth_date = &line2[13..19];
     let expiry_date = &line2[21..27];
 
-    let mut document_number: String<MAX_DOC_NUM_LEN> = String::new();
-    let mut name: String<MAX_NAME_LEN> = String::new();
+    let mut document_number: String<ICAO_TD3_DOC_NUM_MAX_LEN> = String::new();
+    let mut name: String<ICAO_TD3_NAME_MAX_LEN> = String::new();
 
     for &b in doc_num {
         let _ = document_number.push(char::from(b));
@@ -54,10 +56,12 @@ fn parse_icao(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
         }
     }
 
-    ParsedMRZ::ICAO(MRZICAO {
+    ParsedMRZ::MrzIcaoTd3(MrzIcaoTd3 {
         document_number,
         name,
         birth_date: birth_date.try_into().unwrap_or([b'0'; 6]),
         expiry_date: expiry_date.try_into().unwrap_or([b'0'; 6]),
+        birth_date_check: 0,
+        expiry_date_check: 0,
     })
 }

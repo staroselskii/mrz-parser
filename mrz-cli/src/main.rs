@@ -7,7 +7,7 @@ fn main() {
         "L898902C36UTO7408122F1204159ZE184226B<<<<<<<",
     ];
     match parse_lines(&lines) {
-        Ok(MRZ::ICAO(data)) => {
+        Ok(MRZ::IcaoTd3(data)) => {
             println!("Document: {}", data.document_number);
             println!("Name:     {}", data.name);
             println!(

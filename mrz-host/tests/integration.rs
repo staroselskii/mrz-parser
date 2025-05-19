@@ -1,6 +1,6 @@
 use mrz_core::MRZParseError;
 use mrz_host::parse_lines;
-use mrz_host::{MRZ, MRZICAO};
+use mrz_host::{MRZ, MrzIcaoTd3};
 use serde::Deserialize;
 use std::fs;
 use std::path::Path;
@@ -26,7 +26,7 @@ fn test_samples_from_fixtures() {
 
         match (sample.format.as_str(), parsed) {
             ("BCBP", _) | ("TD1", _) => continue,
-            ("TD3", Ok(MRZ::ICAO(mrz))) => {
+            ("TD3", Ok(MRZ::IcaoTd3(mrz))) => {
                 if let Some(expected) = sample.document_number.as_deref() {
                     assert_eq!(mrz.document_number.trim_end_matches('<'), expected);
                 }

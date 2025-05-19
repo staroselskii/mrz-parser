@@ -7,5 +7,5 @@ fn test_valid_icao() {
     let line2 = b"L898902C36UTO7408122F1204159ZE184226B<<<<<<<";
 
     let result = parse_any(&[line1, line2]);
-    assert!(matches!(result, Ok(ParsedMRZ::ICAO(_))));
+    assert!(matches!(result, Ok(ParsedMRZ::MrzIcaoTd3(_))));
 }
