@@ -28,6 +28,18 @@ fn compute_checksum(data: &[u8]) -> u8 {
     (sum % 10) as u8
 }
 
+fn verify_checksum(data: &[u8], check_digit: u8) -> bool {
+    compute_checksum(data) == (check_digit - b'0')
+}
+
+fn decode_mrz_filler<const N: usize>(slice: &[u8]) -> String<N> {
+    let mut out = String::new();
+    for &b in slice {
+        let _ = out.push(if b == b'<' { ' ' } else { b as char });
+    }
+    out
+}
+
 pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
     if lines.len() == 2
         && lines[0].starts_with(b"P")
@@ -83,8 +95,8 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
 
     let birth_date_check = line2[19];
     let expiry_date_check = line2[27];
-    let birth_valid = compute_checksum(birth_date) == (birth_date_check - b'0');
-    let expiry_valid = compute_checksum(expiry_date) == (expiry_date_check - b'0');
+    let birth_valid = verify_checksum(birth_date, birth_date_check);
+    let expiry_valid = verify_checksum(expiry_date, expiry_date_check);
 
     let (final_check, final_check_valid) = if let Some(&ch) = line2.get(43) {
         if (b'0'..=b'9').contains(&ch) {
@@ -102,21 +114,8 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
         (None, None)
     };
 
-    let mut document_number: String<ICAO_TD3_DOC_NUM_MAX_LEN> = String::new();
-    let mut name: String<ICAO_TD3_NAME_MAX_LEN> = String::new();
-
-    for &b in doc_num {
-        let _ = document_number.push(char::from(b));
-    }
-
-    let name_field = &line1[5..44];
-    for &b in name_field {
-        if b == b'<' {
-            let _ = name.push(' ');
-        } else {
-            let _ = name.push(b as char);
-        }
-    }
+    let document_number = decode_mrz_filler::<ICAO_TD3_DOC_NUM_MAX_LEN>(doc_num);
+    let name = decode_mrz_filler::<ICAO_TD3_NAME_MAX_LEN>(&line1[5..44]);
 
     ParsedMRZ::MrzIcaoTd3(MrzIcaoTd3 {
         document_number,
@@ -182,8 +181,7 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> ParsedMRZ {
         let _ = document_number.push(b as char);
     }
     let document_number_check = line1[DOC_NUM_CHECK];
-    let doc_valid =
-        compute_checksum(&line1[DOC_NUM_START..DOC_NUM_END]) == (document_number_check - b'0');
+    let doc_valid = verify_checksum(&line1[DOC_NUM_START..DOC_NUM_END], document_number_check);
 
     let mut optional_data1: String<15> = String::new();
     for &b in &line1[OPTIONAL1_START..OPTIONAL1_END] {
@@ -199,7 +197,7 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> ParsedMRZ {
         .unwrap_or([b'0'; 6]);
     let birth_date_check = line2[BIRTH_DATE_CHECK];
     let birth_date_check_value = compute_checksum(&birth_date);
-    let birth_valid = birth_date_check_value == (birth_date_check - b'0');
+    let birth_valid = verify_checksum(&birth_date, birth_date_check);
 
     let sex = line2[SEX_POS];
 
@@ -208,7 +206,7 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> ParsedMRZ {
         .unwrap_or([b'0'; 6]);
     let expiry_date_check = line2[EXPIRY_DATE_CHECK];
     let expiry_date_check_value = compute_checksum(&expiry_date);
-    let expiry_valid = expiry_date_check_value == (expiry_date_check - b'0');
+    let expiry_valid = verify_checksum(&expiry_date, expiry_date_check);
 
     let mut optional_data2: String<11> = String::new();
     for &b in &line2[OPTIONAL2_START..OPTIONAL2_END] {
@@ -242,15 +240,7 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> ParsedMRZ {
         (None, None)
     };
 
-    // Name: line3[0..30], replace '<' with ' '
-    let mut name: String<ICAO_TD1_NAME_MAX_LEN> = String::new();
-    for &b in &line3[NAME_START..NAME_END] {
-        if b == b'<' {
-            let _ = name.push(' ');
-        } else {
-            let _ = name.push(b as char);
-        }
-    }
+    let name = decode_mrz_filler::<ICAO_TD1_NAME_MAX_LEN>(&line3[NAME_START..NAME_END]);
 
     ParsedMRZ::MrzIcaoTd1(MrzIcaoTd1 {
         document_code,
