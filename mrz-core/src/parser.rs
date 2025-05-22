@@ -53,6 +53,24 @@ fn decode_mrz_filler<const N: usize>(slice: &[u8]) -> String<N> {
     out
 }
 
+fn checked_field<const N: usize>(field: &[u8], check_digit: u8) -> ([u8; N], u8, bool) {
+    let array = field.try_into().unwrap_or([b'0'; N]);
+    let valid = verify_checksum(&array, check_digit);
+    (array, check_digit, valid)
+}
+
+fn fixed_slice<const N: usize>(slice: &[u8]) -> [u8; N] {
+    slice.try_into().unwrap_or([b' '; N])
+}
+
+fn decode_range<const N: usize>(slice: &[u8]) -> String<N> {
+    let mut out = String::new();
+    for &b in slice {
+        let _ = out.push(b as char);
+    }
+    out
+}
+
 pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
     if lines.len() == 2
         && lines[0].starts_with(b"P")
@@ -102,24 +120,43 @@ pub fn parse_any(lines: &[&[u8]]) -> Result<ParsedMRZ, MRZParseError> {
 }
 
 fn parse_td3(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
-    let doc_num = &line2[0..9];
-    let birth_date = &line2[13..19];
-    let expiry_date = &line2[21..27];
+    const DOC_NUM_START: usize = 0;
+    const DOC_NUM_END: usize = 9;
+    const DOC_NUM_CHECK: usize = 9;
 
-    let birth_date_check = line2[19];
-    let expiry_date_check = line2[27];
-    let birth_valid = verify_checksum(birth_date, birth_date_check);
-    let expiry_valid = verify_checksum(expiry_date, expiry_date_check);
+    const BIRTH_DATE_START: usize = 13;
+    const BIRTH_DATE_END: usize = 19;
+    const BIRTH_DATE_CHECK: usize = 19;
+
+    const EXPIRY_DATE_START: usize = 21;
+    const EXPIRY_DATE_END: usize = 27;
+    const EXPIRY_DATE_CHECK: usize = 27;
+
+    const FINAL_CHECK_POS: usize = 43;
+
+    const NAME_START: usize = 5;
+    const NAME_END: usize = 44;
+
+    const DATE_LEN: usize = 6;
+
+    let doc_num = &line2[DOC_NUM_START..DOC_NUM_END];
+    let birth_date_slice = &line2[BIRTH_DATE_START..BIRTH_DATE_END];
+    let expiry_date_slice = &line2[EXPIRY_DATE_START..EXPIRY_DATE_END];
+
+    let birth_date_check = line2[BIRTH_DATE_CHECK];
+    let expiry_date_check = line2[EXPIRY_DATE_CHECK];
+    let (birth_date, _, birth_valid) = checked_field::<DATE_LEN>(birth_date_slice, birth_date_check);
+    let (expiry_date, _, expiry_valid) = checked_field::<DATE_LEN>(expiry_date_slice, expiry_date_check);
 
     let (final_check, final_check_valid) = line2
-        .get(43)
+        .get(FINAL_CHECK_POS)
         .and_then(|&ch| {
             compute_composite_checksum(
                 &[
-                    &line2[0..10],
-                    &line2[13..20],
-                    &line2[21..28],
-                    &line2[28..43],
+                    &line2[DOC_NUM_START..=DOC_NUM_CHECK],
+                    &line2[BIRTH_DATE_START..=BIRTH_DATE_CHECK],
+                    &line2[EXPIRY_DATE_START..=EXPIRY_DATE_CHECK],
+                    &line2[EXPIRY_DATE_CHECK + 1..FINAL_CHECK_POS],
                 ],
                 ch,
             )
@@ -128,13 +165,13 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
         .unwrap_or((None, None));
 
     let document_number = decode_mrz_filler::<ICAO_TD3_DOC_NUM_MAX_LEN>(doc_num);
-    let name = decode_mrz_filler::<ICAO_TD3_NAME_MAX_LEN>(&line1[5..44]);
+    let name = decode_mrz_filler::<ICAO_TD3_NAME_MAX_LEN>(&line1[NAME_START..NAME_END]);
 
     ParsedMRZ::MrzIcaoTd3(MrzIcaoTd3 {
         document_number,
         name,
-        birth_date: birth_date.try_into().unwrap_or([b'0'; 6]),
-        expiry_date: expiry_date.try_into().unwrap_or([b'0'; 6]),
+        birth_date,
+        expiry_date,
         birth_date_check,
         expiry_date_check,
         birth_date_check_valid: birth_valid,
@@ -148,6 +185,8 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
 fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> ParsedMRZ {
     use crate::{MrzIcaoTd1, ICAO_TD1_NAME_MAX_LEN};
     use heapless::String;
+
+    const DATE_LEN: usize = 6;
 
     const DOC_CODE_START: usize = 0;
     const DOC_CODE_END: usize = 2;
@@ -183,46 +222,24 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> ParsedMRZ {
     const NAME_START: usize = 0;
     const NAME_END: usize = 30;
 
-    let document_code = line1[DOC_CODE_START..DOC_CODE_END]
-        .try_into()
-        .unwrap_or([b' '; 2]);
-    let issuing_state = line1[ISSUER_START..ISSUER_END]
-        .try_into()
-        .unwrap_or([b' '; 3]);
-    let mut document_number: String<ICAO_TD1_DOC_NUM_MAX_LEN> = String::new();
-    for &b in &line1[DOC_NUM_START..DOC_NUM_END] {
-        let _ = document_number.push(b as char);
-    }
+    let document_code = fixed_slice::<2>(&line1[DOC_CODE_START..DOC_CODE_END]);
+    let issuing_state = fixed_slice::<3>(&line1[ISSUER_START..ISSUER_END]);
+
+    let document_number = decode_range::<ICAO_TD1_DOC_NUM_MAX_LEN>(&line1[DOC_NUM_START..DOC_NUM_END]);
     let document_number_check = line1[DOC_NUM_CHECK];
     let doc_valid = verify_checksum(&line1[DOC_NUM_START..DOC_NUM_END], document_number_check);
 
-    let mut optional_data1: String<15> = String::new();
-    for &b in &line1[OPTIONAL1_START..OPTIONAL1_END] {
-        let _ = optional_data1.push(b as char);
-    }
+    let optional_data1 = decode_range::<15>(&line1[OPTIONAL1_START..OPTIONAL1_END]);
 
-    let nationality = line2[NATIONALITY_START..NATIONALITY_END]
-        .try_into()
-        .unwrap_or([b' '; 3]);
+    let nationality = fixed_slice::<3>(&line2[NATIONALITY_START..NATIONALITY_END]);
 
-    let birth_date = line2[BIRTH_DATE_START..BIRTH_DATE_END]
-        .try_into()
-        .unwrap_or([b'0'; 6]);
-    let birth_date_check = line2[BIRTH_DATE_CHECK];
-    let birth_valid = verify_checksum(&birth_date, birth_date_check);
+    let (birth_date, birth_date_check, birth_valid) = checked_field::<DATE_LEN>(&line2[BIRTH_DATE_START..BIRTH_DATE_END], line2[BIRTH_DATE_CHECK]);
 
     let sex = line2[SEX_POS];
 
-    let expiry_date = line2[EXPIRY_DATE_START..EXPIRY_DATE_END]
-        .try_into()
-        .unwrap_or([b'0'; 6]);
-    let expiry_date_check = line2[EXPIRY_DATE_CHECK];
-    let expiry_valid = verify_checksum(&expiry_date, expiry_date_check);
+    let (expiry_date, expiry_date_check, expiry_valid) = checked_field::<DATE_LEN>(&line2[EXPIRY_DATE_START..EXPIRY_DATE_END], line2[EXPIRY_DATE_CHECK]);
 
-    let mut optional_data2: String<11> = String::new();
-    for &b in &line2[OPTIONAL2_START..OPTIONAL2_END] {
-        let _ = optional_data2.push(b as char);
-    }
+    let optional_data2 = decode_range::<11>(&line2[OPTIONAL2_START..OPTIONAL2_END]);
 
     let (final_check, final_check_valid) = line2
         .get(FINAL_CHECK_POS)
