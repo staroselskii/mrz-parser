@@ -30,7 +30,7 @@ fn compute_checksum(data: &[u8]) -> u8 {
 
 pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
     if lines.len() == 2
-        && lines[0].starts_with(b"P<")
+        && lines[0].starts_with(b"P")
         && lines[0].len() >= 40
         && lines[1].len() >= 40
     {
@@ -54,7 +54,7 @@ pub fn parse_any(lines: &[&[u8]]) -> Result<ParsedMRZ, MRZParseError> {
             if lines.len() != 2 || lines[0].len() < 44 || lines[1].len() < 44 {
                 return Err(MRZParseError::InvalidLength);
             }
-            Ok(parse_icao(lines[0], lines[1]))
+            Ok(parse_td3(lines[0], lines[1]))
         }
         MRZFormat::MrzIcaoTd1 => {
             if lines.len() != 3
@@ -76,7 +76,7 @@ pub fn parse_any(lines: &[&[u8]]) -> Result<ParsedMRZ, MRZParseError> {
     }
 }
 
-fn parse_icao(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
+fn parse_td3(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
     let doc_num = &line2[0..9];
     let birth_date = &line2[13..19];
     let expiry_date = &line2[21..27];
@@ -85,6 +85,22 @@ fn parse_icao(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
     let expiry_date_check = line2[27];
     let birth_valid = compute_checksum(birth_date) == (birth_date_check - b'0');
     let expiry_valid = compute_checksum(expiry_date) == (expiry_date_check - b'0');
+
+    let (final_check, final_check_valid) = if let Some(&ch) = line2.get(43) {
+        if (b'0'..=b'9').contains(&ch) {
+            let mut final_check_data: heapless::Vec<u8, 64> = heapless::Vec::new();
+            final_check_data.extend_from_slice(&line2[0..10]).unwrap();  // Document number + check
+            final_check_data.extend_from_slice(&line2[13..20]).unwrap(); // Birth + check
+            final_check_data.extend_from_slice(&line2[21..28]).unwrap(); // Expiry + check
+            final_check_data.extend_from_slice(&line2[28..43]).unwrap(); // Optional + check
+            let is_valid = compute_checksum(&final_check_data) == (ch - b'0');
+            (Some(ch), Some(is_valid))
+        } else {
+            (None, None)
+        }
+    } else {
+        (None, None)
+    };
 
     let mut document_number: String<ICAO_TD3_DOC_NUM_MAX_LEN> = String::new();
     let mut name: String<ICAO_TD3_NAME_MAX_LEN> = String::new();
@@ -111,6 +127,8 @@ fn parse_icao(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
         expiry_date_check,
         birth_date_check_valid: birth_valid,
         expiry_date_check_valid: expiry_valid,
+        final_check,
+        final_check_valid,
     })
 }
 

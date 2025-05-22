@@ -26,6 +26,8 @@ pub struct MrzIcaoTd3 {
     pub expiry_date: [u8; ICAO_COMMON_DATE_LEN],
     pub expiry_date_check: u8,
     pub expiry_date_check_valid: bool,
+    pub final_check: Option<u8>,
+    pub final_check_valid: Option<bool>,
 }
 
 pub const ICAO_TD1_DOC_NUM_MAX_LEN: usize = 9;
