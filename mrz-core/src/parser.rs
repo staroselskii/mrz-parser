@@ -1,6 +1,6 @@
 use crate::{
     MRZFormat, MRZParseError, MrzIcaoTd3, ParsedMRZ, ICAO_TD1_DOC_NUM_MAX_LEN,
-    ICAO_TD3_DOC_NUM_MAX_LEN, ICAO_TD3_NAME_MAX_LEN,
+    ICAO_TD3_DOC_NUM_MAX_LEN, ICAO_TD3_NAME_MAX_LEN, ICAO_COMMON_DATE_LEN,
 };
 use heapless::String;
 
@@ -137,16 +137,14 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
     const NAME_START: usize = 5;
     const NAME_END: usize = 44;
 
-    const DATE_LEN: usize = 6;
-
-    let doc_num = &line2[DOC_NUM_START..DOC_NUM_END];
+    let (doc_num_array, doc_num_check, doc_valid) = checked_field::<ICAO_TD3_DOC_NUM_MAX_LEN>(&line2[DOC_NUM_START..DOC_NUM_END], line2[DOC_NUM_CHECK]);
     let birth_date_slice = &line2[BIRTH_DATE_START..BIRTH_DATE_END];
     let expiry_date_slice = &line2[EXPIRY_DATE_START..EXPIRY_DATE_END];
 
     let birth_date_check = line2[BIRTH_DATE_CHECK];
     let expiry_date_check = line2[EXPIRY_DATE_CHECK];
-    let (birth_date, _, birth_valid) = checked_field::<DATE_LEN>(birth_date_slice, birth_date_check);
-    let (expiry_date, _, expiry_valid) = checked_field::<DATE_LEN>(expiry_date_slice, expiry_date_check);
+    let (birth_date, _, birth_valid) = checked_field::<ICAO_COMMON_DATE_LEN>(birth_date_slice, birth_date_check);
+    let (expiry_date, _, expiry_valid) = checked_field::<ICAO_COMMON_DATE_LEN>(expiry_date_slice, expiry_date_check);
 
     let (final_check, final_check_valid) = line2
         .get(FINAL_CHECK_POS)
@@ -164,11 +162,13 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
         })
         .unwrap_or((None, None));
 
-    let document_number = decode_mrz_filler::<ICAO_TD3_DOC_NUM_MAX_LEN>(doc_num);
+    let document_number = decode_mrz_filler::<ICAO_TD3_DOC_NUM_MAX_LEN>(&doc_num_array);
     let name = decode_mrz_filler::<ICAO_TD3_NAME_MAX_LEN>(&line1[NAME_START..NAME_END]);
 
     ParsedMRZ::MrzIcaoTd3(MrzIcaoTd3 {
         document_number,
+        document_number_check: doc_num_check,
+        document_number_check_valid: doc_valid,
         name,
         birth_date,
         expiry_date,
@@ -184,9 +184,6 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
 // Parse ICAO TD1 MRZ format
 fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> ParsedMRZ {
     use crate::{MrzIcaoTd1, ICAO_TD1_NAME_MAX_LEN};
-    use heapless::String;
-
-    const DATE_LEN: usize = 6;
 
     const DOC_CODE_START: usize = 0;
     const DOC_CODE_END: usize = 2;
@@ -233,11 +230,11 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> ParsedMRZ {
 
     let nationality = fixed_slice::<3>(&line2[NATIONALITY_START..NATIONALITY_END]);
 
-    let (birth_date, birth_date_check, birth_valid) = checked_field::<DATE_LEN>(&line2[BIRTH_DATE_START..BIRTH_DATE_END], line2[BIRTH_DATE_CHECK]);
+    let (birth_date, birth_date_check, birth_valid) = checked_field::<ICAO_COMMON_DATE_LEN>(&line2[BIRTH_DATE_START..BIRTH_DATE_END], line2[BIRTH_DATE_CHECK]);
 
     let sex = line2[SEX_POS];
 
-    let (expiry_date, expiry_date_check, expiry_valid) = checked_field::<DATE_LEN>(&line2[EXPIRY_DATE_START..EXPIRY_DATE_END], line2[EXPIRY_DATE_CHECK]);
+    let (expiry_date, expiry_date_check, expiry_valid) = checked_field::<ICAO_COMMON_DATE_LEN>(&line2[EXPIRY_DATE_START..EXPIRY_DATE_END], line2[EXPIRY_DATE_CHECK]);
 
     let optional_data2 = decode_range::<11>(&line2[OPTIONAL2_START..OPTIONAL2_END]);
 
