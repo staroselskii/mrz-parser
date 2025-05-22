@@ -19,7 +19,8 @@ fn test_valid_td3_with_checksums() {
     let result = parse_any(&[line1, line2]);
     assert!(
         matches!(result, Ok(ParsedMRZ::MrzIcaoTd3(_))),
-        "Expected ParsedMRZ::MrzIcaoTd3, got {:?}", result
+        "Expected ParsedMRZ::MrzIcaoTd3, got {:?}",
+        result
     );
     if let Ok(ParsedMRZ::MrzIcaoTd3(mrz)) = result {
         assert!(
@@ -31,7 +32,8 @@ fn test_valid_td3_with_checksums() {
             "Expiry date check should have passed"
         );
         assert_eq!(
-            mrz.final_check_valid, Some(true),
+            mrz.final_check_valid,
+            Some(true),
             "Final check digit should be present and correct"
         );
     }

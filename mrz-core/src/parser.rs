@@ -32,6 +32,19 @@ fn verify_checksum(data: &[u8], check_digit: u8) -> bool {
     compute_checksum(data) == (check_digit - b'0')
 }
 
+fn compute_composite_checksum<'a>(segments: &[&'a [u8]], check_digit: u8) -> Option<(u8, bool)> {
+    if (b'0'..=b'9').contains(&check_digit) {
+        let mut final_check_data: heapless::Vec<u8, 64> = heapless::Vec::new();
+        for segment in segments {
+            final_check_data.extend_from_slice(segment).ok()?;
+        }
+        let is_valid = compute_checksum(&final_check_data) == (check_digit - b'0');
+        Some((check_digit, is_valid))
+    } else {
+        None
+    }
+}
+
 fn decode_mrz_filler<const N: usize>(slice: &[u8]) -> String<N> {
     let mut out = String::new();
     for &b in slice {
@@ -98,21 +111,21 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> ParsedMRZ {
     let birth_valid = verify_checksum(birth_date, birth_date_check);
     let expiry_valid = verify_checksum(expiry_date, expiry_date_check);
 
-    let (final_check, final_check_valid) = if let Some(&ch) = line2.get(43) {
-        if (b'0'..=b'9').contains(&ch) {
-            let mut final_check_data: heapless::Vec<u8, 64> = heapless::Vec::new();
-            final_check_data.extend_from_slice(&line2[0..10]).unwrap();  // Document number + check
-            final_check_data.extend_from_slice(&line2[13..20]).unwrap(); // Birth + check
-            final_check_data.extend_from_slice(&line2[21..28]).unwrap(); // Expiry + check
-            final_check_data.extend_from_slice(&line2[28..43]).unwrap(); // Optional + check
-            let is_valid = compute_checksum(&final_check_data) == (ch - b'0');
-            (Some(ch), Some(is_valid))
-        } else {
-            (None, None)
-        }
-    } else {
-        (None, None)
-    };
+    let (final_check, final_check_valid) = line2
+        .get(43)
+        .and_then(|&ch| {
+            compute_composite_checksum(
+                &[
+                    &line2[0..10],
+                    &line2[13..20],
+                    &line2[21..28],
+                    &line2[28..43],
+                ],
+                ch,
+            )
+            .map(|(ch, valid)| (Some(ch), Some(valid)))
+        })
+        .unwrap_or((None, None));
 
     let document_number = decode_mrz_filler::<ICAO_TD3_DOC_NUM_MAX_LEN>(doc_num);
     let name = decode_mrz_filler::<ICAO_TD3_NAME_MAX_LEN>(&line1[5..44]);
@@ -196,7 +209,6 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> ParsedMRZ {
         .try_into()
         .unwrap_or([b'0'; 6]);
     let birth_date_check = line2[BIRTH_DATE_CHECK];
-    let birth_date_check_value = compute_checksum(&birth_date);
     let birth_valid = verify_checksum(&birth_date, birth_date_check);
 
     let sex = line2[SEX_POS];
@@ -205,7 +217,6 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> ParsedMRZ {
         .try_into()
         .unwrap_or([b'0'; 6]);
     let expiry_date_check = line2[EXPIRY_DATE_CHECK];
-    let expiry_date_check_value = compute_checksum(&expiry_date);
     let expiry_valid = verify_checksum(&expiry_date, expiry_date_check);
 
     let mut optional_data2: String<11> = String::new();
@@ -213,32 +224,21 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> ParsedMRZ {
         let _ = optional_data2.push(b as char);
     }
 
-    let (final_check, final_check_valid) = if let Some(&ch) = line2.get(FINAL_CHECK_POS) {
-        if (b'0'..=b'9').contains(&ch) {
-            let mut final_check_data: heapless::Vec<u8, 50> = heapless::Vec::new();
-
-            // Composite checksum per ICAO 9303:
-            final_check_data
-                .extend_from_slice(&line1[DOC_NUM_START..OPTIONAL1_END])
-                .unwrap(); // Line 1: positions 6–30
-            final_check_data
-                .extend_from_slice(&line2[BIRTH_DATE_START..=BIRTH_DATE_CHECK])
-                .unwrap(); // Line 2: 1–7 (include check digit)
-            final_check_data
-                .extend_from_slice(&line2[EXPIRY_DATE_START..=EXPIRY_DATE_CHECK])
-                .unwrap(); // Line 2: 9–15 (include check digit)
-            final_check_data
-                .extend_from_slice(&line2[OPTIONAL2_START..FINAL_CHECK_POS])
-                .unwrap(); // Line 2: 19–29
-
-            let final_valid = compute_checksum(&final_check_data) == (ch - b'0');
-            (Some(ch), Some(final_valid))
-        } else {
-            (None, None)
-        }
-    } else {
-        (None, None)
-    };
+    let (final_check, final_check_valid) = line2
+        .get(FINAL_CHECK_POS)
+        .and_then(|&ch| {
+            compute_composite_checksum(
+                &[
+                    &line1[DOC_NUM_START..OPTIONAL1_END],
+                    &line2[BIRTH_DATE_START..=BIRTH_DATE_CHECK],
+                    &line2[EXPIRY_DATE_START..=EXPIRY_DATE_CHECK],
+                    &line2[OPTIONAL2_START..FINAL_CHECK_POS],
+                ],
+                ch,
+            )
+            .map(|(ch, valid)| (Some(ch), Some(valid)))
+        })
+        .unwrap_or((None, None));
 
     let name = decode_mrz_filler::<ICAO_TD1_NAME_MAX_LEN>(&line3[NAME_START..NAME_END]);
 
