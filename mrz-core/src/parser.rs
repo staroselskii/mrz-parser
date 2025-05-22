@@ -222,9 +222,8 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> ParsedMRZ {
     let document_code = fixed_slice::<2>(&line1[DOC_CODE_START..DOC_CODE_END]);
     let issuing_state = fixed_slice::<3>(&line1[ISSUER_START..ISSUER_END]);
 
-    let document_number = decode_range::<ICAO_TD1_DOC_NUM_MAX_LEN>(&line1[DOC_NUM_START..DOC_NUM_END]);
-    let document_number_check = line1[DOC_NUM_CHECK];
-    let doc_valid = verify_checksum(&line1[DOC_NUM_START..DOC_NUM_END], document_number_check);
+    let (doc_num_array, document_number_check, doc_valid) = checked_field::<ICAO_TD1_DOC_NUM_MAX_LEN>(&line1[DOC_NUM_START..DOC_NUM_END], line1[DOC_NUM_CHECK]);
+    let document_number = decode_range::<ICAO_TD1_DOC_NUM_MAX_LEN>(&doc_num_array);
 
     let optional_data1 = decode_range::<15>(&line1[OPTIONAL1_START..OPTIONAL1_END]);
 
