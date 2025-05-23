@@ -5,6 +5,5 @@ pub use mrz_core::{MRZFormat, MRZParseError, ParsedMRZ};
 pub use mrz_host::{
     parse_lines,
     parse_mrz_date_with_reference,
-    MrzIcaoTd3, // Rich types
-    MRZ,        // Rich enum
+    MRZ, // Rich enum
 };

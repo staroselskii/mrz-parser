@@ -29,7 +29,7 @@ fn test_samples_valid() {
         let parsed = parse_lines(&line_refs);
 
         match (sample.format.as_str(), parsed) {
-            ("TD1", Ok(MRZ::IcaoTd1(mrz))) => {
+            ("TD1", Ok(MRZ::Icao(mrz))) => {
                 if let Some(expected) = sample.document_number.as_deref() {
                     assert_eq!(mrz.document_number.trim_end_matches('<'), expected);
                 }
@@ -52,7 +52,7 @@ fn test_samples_valid() {
                     assert_eq!(mrz.optional_data2.trim_end_matches('<'), expected);
                 }
             }
-            ("TD3", Ok(MRZ::IcaoTd3(mrz))) => {
+            ("TD3", Ok(MRZ::Icao(mrz))) => {
                 if let Some(expected) = sample.document_number.as_deref() {
                     assert_eq!(mrz.document_number.trim_end_matches('<'), expected);
                 }
