@@ -31,48 +31,48 @@ fn test_samples_valid() {
         match (sample.format.as_str(), parsed) {
             ("TD1", Ok(MRZ::Icao(mrz))) => {
                 if let Some(expected) = sample.document_number.as_deref() {
-                    assert_eq!(mrz.document_number.trim_end_matches('<'), expected);
+                    assert_eq!(mrz.document_number().trim_end_matches('<'), expected);
                 }
                 if let Some(expected) = sample.name.as_deref() {
-                    assert_eq!(mrz.name.trim(), expected);
+                    assert_eq!(mrz.name().trim(), expected);
                 }
                 if let Some(expected) = sample.expiry_date.as_deref() {
-                    assert_eq!(mrz.expiry_date.unwrap().to_string(), expected);
+                    assert_eq!(mrz.expiry_date().unwrap().to_string(), expected);
                 }
                 if let Some(expected) = sample.birth_date.as_deref() {
-                    assert_eq!(mrz.birth_date.unwrap().to_string(), expected);
+                    assert_eq!(mrz.birth_date().unwrap().to_string(), expected);
                 }
                 if let Some(expected) = sample.sex.as_deref() {
-                    assert_eq!(mrz.sex.to_string(), expected);
+                    assert_eq!(mrz.sex().to_string(), expected);
                 }
                 if let Some(expected) = sample.optional_data1.as_deref() {
-                    assert_eq!(mrz.optional_data1.trim_end_matches('<'), expected);
+                    assert_eq!(mrz.optional_data1().trim_end_matches('<'), expected);
                 }
                 if let Some(expected) = sample.optional_data2.as_deref() {
-                    assert_eq!(mrz.optional_data2.trim_end_matches('<'), expected);
+                    assert_eq!(mrz.optional_data2().trim_end_matches('<'), expected);
                 }
             }
             ("TD3", Ok(MRZ::Icao(mrz))) => {
                 if let Some(expected) = sample.document_number.as_deref() {
-                    assert_eq!(mrz.document_number.trim_end_matches('<'), expected);
+                    assert_eq!(mrz.document_number().trim_end_matches('<'), expected);
                 }
                 if let Some(expected) = sample.name.as_deref() {
-                    assert_eq!(mrz.name.trim(), expected);
+                    assert_eq!(mrz.name().trim(), expected);
                 }
                 if let Some(expected) = sample.birth_date.as_deref() {
-                    assert_eq!(mrz.birth_date.unwrap().to_string(), expected);
+                    assert_eq!(mrz.birth_date().unwrap().to_string(), expected);
                 }
                 if let Some(expected) = sample.expiry_date.as_deref() {
-                    assert_eq!(mrz.expiry_date.unwrap().to_string(), expected);
+                    assert_eq!(mrz.expiry_date().unwrap().to_string(), expected);
                 }
                 if let Some(expected) = sample.sex.as_deref() {
-                    assert_eq!(mrz.sex.to_string(), expected);
+                    assert_eq!(mrz.sex().to_string(), expected);
                 }
                 if let Some(expected) = sample.optional_data1.as_deref() {
-                    assert_eq!(mrz.optional_data1.trim_end_matches('<'), expected);
+                    assert_eq!(mrz.optional_data1().trim_end_matches('<'), expected);
                 }
                 if let Some(expected) = sample.optional_data2.as_deref() {
-                    assert_eq!(mrz.optional_data2.trim_end_matches('<'), expected);
+                    assert_eq!(mrz.optional_data2().trim_end_matches('<'), expected);
                 }
             }
             (_, Err(e)) => {

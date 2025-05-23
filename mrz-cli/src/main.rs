@@ -23,19 +23,19 @@ fn main() {
 fn handle_parse(lines: &[&str]) {
     match parse_lines(lines) {
         Ok(MRZ::Icao(data)) => {
-            println!("Document: {}", data.document_number);
-            println!("Name:     {}", data.name);
-            println!("Nationality:     {}", data.nationality);
-            println!("Issuer:          {}", data.issuing_state);
+            println!("Document: {}", data.document_number());
+            println!("Name:     {}", data.name());
+            println!("Nationality:     {}", data.nationality());
+            println!("Issuer:          {}", data.issuing_state());
             println!(
                 "Birth:    {}",
-                data.birth_date
+                data.birth_date()
                     .map(|d| d.to_string())
                     .unwrap_or_else(|| "Invalid".into())
             );
             println!(
                 "Expiry:   {}",
-                data.expiry_date
+                data.expiry_date()
                     .map(|d| d.to_string())
                     .unwrap_or_else(|| "Invalid".into())
             );
