@@ -1,5 +1,6 @@
 [
   {
+    "invalid_checksums": [],
     "format": "TD3",
     "lines": [
       "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
@@ -8,9 +9,11 @@
     "document_number": "L898902C3",
     "name": "ERIKSSON  ANNA MARIA",
     "birth_date": "1974-08-12",
-    "expiry_date": "2012-04-15"
+    "expiry_date": "2012-04-15",
+    "sex": "F"
   },
   {
+    "invalid_checksums": [],
     "format": "TD1",
     "lines": [
       "I<UTOD231458907<<<<<<<<<<<<<<<",
@@ -20,9 +23,11 @@
     "document_number": "D23145890",
     "name": "ERIKSSON  ANNA MARIA",
     "birth_date": "1974-08-12",
-    "expiry_date": "2012-04-15"
+    "expiry_date": "2012-04-15",
+    "sex": "F"
   },
   {
+    "invalid_checksums": ["DocumentNumber"],
     "format": "TD3",
     "lines": [
       "P<GBRTHATCHER<<MARGARET<HILDA<<<<<<<<<<<<<<<<<",
@@ -31,9 +36,11 @@
     "document_number": "123456789",
     "name": "THATCHER  MARGARET HILDA",
     "birth_date": "1956-01-13",
-    "expiry_date": "2025-01-01"
+    "expiry_date": "2025-01-01",
+    "sex": "F"
   },
   {
+    "invalid_checksums": [],
     "format": "TD1",
     "lines": [
       "I<FRAD12345678<<<<<<<<<<<<<<",
@@ -43,9 +50,11 @@
     "document_number": "D12345678",
     "name": "DURAND  PIERRE LOUIS",
     "birth_date": "1980-01-01",
-    "expiry_date": "2025-01-01"
+    "expiry_date": "2025-01-01",
+    "sex": "M"
   },
   {
+    "invalid_checksums": [],
     "format": "TD1",
     "lines": [
       "I<YTOD231458907<<<<<<<<<<<<<<<",
@@ -55,9 +64,11 @@
     "document_number": "D23145890",
     "name": "ERIKSSON  ANNA MARIA",
     "birth_date": "1934-07-12",
-    "expiry_date": "1995-07-12"
+    "expiry_date": "1995-07-12",
+    "sex": "M"
   },
   {
+    "invalid_checksums": [],
     "format": "TD3",
     "lines": [
       "P<GBRSMITH<<JOHN<ALBERT<<<<<<<<<<<<<<<<<<<",
@@ -66,9 +77,11 @@
     "document_number": "123456789",
     "name": "SMITH  JOHN ALBERT",
     "birth_date": "1969-01-01",
-    "expiry_date": "2024-01-01"
+    "expiry_date": "2024-01-01",
+    "sex": "M"
   },
   {
+    "invalid_checksums": [],
     "format": "TD1",
     "lines": [
       "I<FRA1234567890<<<<<<<<<<<<<<<",
@@ -78,6 +91,7 @@
     "document_number": "123456789",
     "name": "DUPONT  JEAN PIERRE",
     "birth_date": "1980-01-01",
-    "expiry_date": "2024-01-01"
+    "expiry_date": "2024-01-01",
+    "sex": "M"
   }
 ]

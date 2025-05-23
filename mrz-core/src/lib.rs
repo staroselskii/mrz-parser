@@ -132,3 +132,14 @@ pub enum MRZChecksumError {
     ExpiryDate,
     Final,
 }
+
+impl std::fmt::Display for MRZChecksumError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MRZChecksumError::DocumentNumber => f.write_str("DocumentNumber"),
+            MRZChecksumError::BirthDate => f.write_str("BirthDate"),
+            MRZChecksumError::ExpiryDate => f.write_str("ExpiryDate"),
+            MRZChecksumError::Final => f.write_str("Final"),
+        }
+    }
+}

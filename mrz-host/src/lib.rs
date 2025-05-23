@@ -16,6 +16,10 @@ pub struct MrzIcaoTd3 {
     pub name: String,
     pub birth_date: Option<Date>,
     pub expiry_date: Option<Date>,
+    pub sex: char,
+    pub optional_data1: String,
+    pub optional_data2: String,
+    pub final_check: Option<bool>,
 }
 
 #[derive(Debug)]
@@ -84,6 +88,10 @@ pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
                     Some(expiry_date_bytes),
                 ),
                 expiry_date: parse_mrz_date_with_reference(expiry_date_bytes, None),
+                sex: raw.sex() as char,
+                optional_data1: raw.optional_data1.to_string(),
+                optional_data2: raw.optional_data2.to_string(),
+                final_check: raw.is_final_check_valid(),
             }))
         }
         ParsedMRZ::MrzIcaoTd1(raw) => {
