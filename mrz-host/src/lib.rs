@@ -58,27 +58,35 @@ pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
     let parsed = parse_any(&refs)?;
 
     match parsed {
-        ParsedMRZ::MrzIcaoTd3(raw) => Ok(MRZ::IcaoTd3(MrzIcaoTd3 {
-            document_number: parse_str_field(raw.document_number()),
-            name: raw.name.to_string(),
-            birth_date: parse_mrz_date(&raw.birth_date()),
-            expiry_date: parse_mrz_date(&raw.expiry_date()),
-        })),
-        ParsedMRZ::MrzIcaoTd1(raw) => Ok(MRZ::IcaoTd1(MrzIcaoTd1 {
-            document_code: parse_field(&raw.document_code),
-            issuing_state: parse_field(&raw.issuing_state),
-            name: raw.name.to_string(),
-            document_number: parse_str_field(raw.document_number()),
-            nationality: parse_field(&raw.nationality),
-            birth_date: parse_mrz_date(&raw.birth_date()),
-            birth_date_check: raw.is_birth_date_valid(),
-            sex: raw.sex() as char,
-            expiry_date: parse_mrz_date(&raw.expiry_date()),
-            expiry_date_check: raw.is_expiry_date_valid(),
-            optional_data1: raw.optional_data1.to_string(),
-            optional_data2: raw.optional_data2.to_string(),
-            final_check: raw.is_final_check_valid(),
-        })),
+        ParsedMRZ::MrzIcaoTd3(raw) => {
+            let birth_date_bytes = raw.birth_date();
+            let expiry_date_bytes = raw.expiry_date();
+            Ok(MRZ::IcaoTd3(MrzIcaoTd3 {
+                document_number: parse_str_field(raw.document_number()),
+                name: raw.name.to_string(),
+                birth_date: parse_mrz_date_with_reference(birth_date_bytes, Some(expiry_date_bytes)),
+                expiry_date: parse_mrz_date_with_reference(expiry_date_bytes, None),
+            }))
+        }
+        ParsedMRZ::MrzIcaoTd1(raw) => {
+            let birth_date_bytes = raw.birth_date();
+            let expiry_date_bytes = raw.expiry_date();
+            Ok(MRZ::IcaoTd1(MrzIcaoTd1 {
+                document_code: parse_field(&raw.document_code),
+                issuing_state: parse_field(&raw.issuing_state),
+                name: raw.name.to_string(),
+                document_number: parse_str_field(raw.document_number()),
+                nationality: parse_field(&raw.nationality),
+                birth_date: parse_mrz_date_with_reference(birth_date_bytes, Some(expiry_date_bytes)),
+                birth_date_check: raw.is_birth_date_valid(),
+                sex: raw.sex() as char,
+                expiry_date: parse_mrz_date_with_reference(expiry_date_bytes, None),
+                expiry_date_check: raw.is_expiry_date_valid(),
+                optional_data1: raw.optional_data1.to_string(),
+                optional_data2: raw.optional_data2.to_string(),
+                final_check: raw.is_final_check_valid(),
+            }))
+        }
         ParsedMRZ::Unknown => Ok(MRZ::Unknown),
     }
 }
@@ -94,13 +102,26 @@ fn parse_str_field(s: &str) -> String {
     s.trim_end_matches('<').to_string()
 }
 
-pub fn parse_mrz_date(raw: &[u8; 6]) -> Option<Date> {
-    let s = core::str::from_utf8(raw).ok()?;
-    let year = s[0..2].parse::<u16>().ok()?;
-    let month = s[2..4].parse::<u8>().ok()?;
-    let day = s[4..6].parse::<u8>().ok()?;
+pub fn parse_mrz_date_with_reference(date: &[u8; 6], reference: Option<&[u8; 6]>) -> Option<Date> {
+    let year = core::str::from_utf8(&date[0..2]).ok()?.parse::<u16>().ok()?;
+    let month = core::str::from_utf8(&date[2..4]).ok()?.parse::<u8>().ok()?;
+    let day = core::str::from_utf8(&date[4..6]).ok()?.parse::<u8>().ok()?;
 
-    let full_year = if year >= 50 { 1900 + year } else { 2000 + year };
+    let full_year = if let Some(ref_date) = reference {
+        let ref_year = core::str::from_utf8(&ref_date[0..2]).ok()?.parse::<u16>().ok()?;
+        let ref_century = if ref_year >= 50 { 1900 } else { 2000 };
+        let ref_full_year = ref_century + ref_year;
+
+        let candidate = 1900 + year;
+        if candidate > ref_full_year {
+            2000 + year
+        } else {
+            candidate
+        }
+    } else {
+        if year >= 50 { 1900 + year } else { 2000 + year }
+    };
+
     let month = Month::try_from(month).ok()?;
     Date::from_calendar_date(full_year as i32, month, day).ok()
 }
