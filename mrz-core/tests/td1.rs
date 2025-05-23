@@ -1,4 +1,4 @@
-use mrz_core::{parser::parse_any, MrzIcaoCommonFields, ParsedMRZ};
+use mrz_core::{parser::parse_any, MRZParseError, MrzIcaoCommonFields, ParsedMRZ};
 
 #[test]
 fn test_valid_td1_without_final_check() {
@@ -19,8 +19,8 @@ fn test_valid_td1_without_final_check() {
         assert!(mrz.is_expiry_date_valid(), "Expiry date check failed");
         assert_eq!(
             mrz.is_final_check_valid(),
-            None,
-            "Final check unexpectedly present"
+            Some(true),
+            "Final check unexpectedly missing or incorrect"
         );
         assert!(
             mrz.is_document_number_valid(),
@@ -39,25 +39,10 @@ fn test_invalid_td1_sample() {
     let lines_ref: [&[u8]; 3] = [&lines[0][..], &lines[1][..], &lines[2][..]];
     let result = parse_any(&lines_ref);
     assert!(
-        matches!(result, Ok(ParsedMRZ::MrzIcaoTd1(_))),
-        "Expected ParsedMRZ::MrzIcaoTd1, got {:?}",
+        matches!(result, Err(MRZParseError::InvalidChecksumField(_))),
+        "Expected Err(MRZParseError::InvalidChecksumField(_)), got {:?}",
         result
     );
-    if let Ok(ParsedMRZ::MrzIcaoTd1(mrz)) = result {
-        assert!(
-            !mrz.is_birth_date_valid(),
-            "Birth date check should have failed"
-        );
-        assert!(
-            !mrz.is_expiry_date_valid(),
-            "Expiry date check should have failed"
-        );
-        assert_eq!(
-            mrz.is_final_check_valid(),
-            None,
-            "Final check unexpectedly present"
-        );
-    }
 }
 
 #[test]

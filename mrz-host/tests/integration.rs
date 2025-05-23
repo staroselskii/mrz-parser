@@ -36,7 +36,6 @@ fn test_samples_from_fixtures() {
                     assert_eq!(mrz.expiry_date.unwrap().to_string(), expected);
                 }
                 if let Some(expected) = sample.birth_date.as_deref() {
-                    dbg!(&mrz);
                     assert_eq!(mrz.birth_date.unwrap().to_string(), expected);
                 }
             }
@@ -53,6 +52,11 @@ fn test_samples_from_fixtures() {
                 if let Some(expected) = sample.expiry_date.as_deref() {
                     assert_eq!(mrz.expiry_date.unwrap().to_string(), expected);
                 }
+            }
+            ("TD1", Err(e)) | ("TD3", Err(e)) => {
+                dbg!(&sample.lines);
+                dbg!(e);
+                panic!("Failed to parse expected format: {}", sample.format);
             }
             _ => {
                 dbg!(&sample.lines);

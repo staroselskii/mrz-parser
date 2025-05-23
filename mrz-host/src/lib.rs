@@ -1,4 +1,6 @@
-use mrz_core::{parser::parse_any, MRZParseError, MrzIcaoCommonFields, ParsedMRZ};
+use mrz_core::{
+    parser::parse_any, MRZChecksumError, MRZParseError, MrzIcaoCommonFields, ParsedMRZ,
+};
 use time::{Date, Month};
 
 #[derive(Debug)]
@@ -59,16 +61,50 @@ pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
 
     match parsed {
         ParsedMRZ::MrzIcaoTd3(raw) => {
+            if !raw.is_birth_date_valid() {
+                return Err(MRZParseError::InvalidChecksumField(
+                    MRZChecksumError::BirthDate,
+                ));
+            }
+            if !raw.is_expiry_date_valid() {
+                return Err(MRZParseError::InvalidChecksumField(
+                    MRZChecksumError::ExpiryDate,
+                ));
+            }
+            if raw.is_final_check_valid() == Some(false) {
+                return Err(MRZParseError::InvalidChecksumField(MRZChecksumError::Final));
+            }
             let birth_date_bytes = raw.birth_date();
             let expiry_date_bytes = raw.expiry_date();
             Ok(MRZ::IcaoTd3(MrzIcaoTd3 {
                 document_number: parse_str_field(raw.document_number()),
                 name: raw.name.to_string(),
-                birth_date: parse_mrz_date_with_reference(birth_date_bytes, Some(expiry_date_bytes)),
+                birth_date: parse_mrz_date_with_reference(
+                    birth_date_bytes,
+                    Some(expiry_date_bytes),
+                ),
                 expiry_date: parse_mrz_date_with_reference(expiry_date_bytes, None),
             }))
         }
         ParsedMRZ::MrzIcaoTd1(raw) => {
+            if !raw.is_birth_date_valid() {
+                return Err(MRZParseError::InvalidChecksumField(
+                    MRZChecksumError::BirthDate,
+                ));
+            }
+            if !raw.is_expiry_date_valid() {
+                return Err(MRZParseError::InvalidChecksumField(
+                    MRZChecksumError::ExpiryDate,
+                ));
+            }
+            if !raw.is_document_number_valid() {
+                return Err(MRZParseError::InvalidChecksumField(
+                    MRZChecksumError::DocumentNumber,
+                ));
+            }
+            if raw.is_final_check_valid() == Some(false) {
+                return Err(MRZParseError::InvalidChecksumField(MRZChecksumError::Final));
+            }
             let birth_date_bytes = raw.birth_date();
             let expiry_date_bytes = raw.expiry_date();
             Ok(MRZ::IcaoTd1(MrzIcaoTd1 {
@@ -77,7 +113,10 @@ pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
                 name: raw.name.to_string(),
                 document_number: parse_str_field(raw.document_number()),
                 nationality: parse_field(&raw.nationality),
-                birth_date: parse_mrz_date_with_reference(birth_date_bytes, Some(expiry_date_bytes)),
+                birth_date: parse_mrz_date_with_reference(
+                    birth_date_bytes,
+                    Some(expiry_date_bytes),
+                ),
                 birth_date_check: raw.is_birth_date_valid(),
                 sex: raw.sex() as char,
                 expiry_date: parse_mrz_date_with_reference(expiry_date_bytes, None),
@@ -103,12 +142,18 @@ fn parse_str_field(s: &str) -> String {
 }
 
 pub fn parse_mrz_date_with_reference(date: &[u8; 6], reference: Option<&[u8; 6]>) -> Option<Date> {
-    let year = core::str::from_utf8(&date[0..2]).ok()?.parse::<u16>().ok()?;
+    let year = core::str::from_utf8(&date[0..2])
+        .ok()?
+        .parse::<u16>()
+        .ok()?;
     let month = core::str::from_utf8(&date[2..4]).ok()?.parse::<u8>().ok()?;
     let day = core::str::from_utf8(&date[4..6]).ok()?.parse::<u8>().ok()?;
 
     let full_year = if let Some(ref_date) = reference {
-        let ref_year = core::str::from_utf8(&ref_date[0..2]).ok()?.parse::<u16>().ok()?;
+        let ref_year = core::str::from_utf8(&ref_date[0..2])
+            .ok()?
+            .parse::<u16>()
+            .ok()?;
         let ref_century = if ref_year >= 50 { 1900 } else { 2000 };
         let ref_full_year = ref_century + ref_year;
 
@@ -119,7 +164,11 @@ pub fn parse_mrz_date_with_reference(date: &[u8; 6], reference: Option<&[u8; 6]>
             candidate
         }
     } else {
-        if year >= 50 { 1900 + year } else { 2000 + year }
+        if year >= 50 {
+            1900 + year
+        } else {
+            2000 + year
+        }
     };
 
     let month = Month::try_from(month).ok()?;

@@ -119,7 +119,16 @@ pub enum MRZFormat {
 #[derive(Debug, PartialEq, Eq)]
 pub enum MRZParseError {
     InvalidLength,
+    InvalidChecksumField(MRZChecksumError),
     UnknownFormat,
     UnsupportedFormat,
     Utf8Error,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum MRZChecksumError {
+    DocumentNumber,
+    BirthDate,
+    ExpiryDate,
+    Final,
 }
