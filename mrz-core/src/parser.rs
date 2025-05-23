@@ -1,3 +1,15 @@
+fn parse_checked_field<const N: usize>(
+    field: &[u8],
+    check: u8,
+    kind: MRZChecksumError,
+) -> Result<[u8; N], MRZParseError> {
+    let (data, valid) = checked_field::<N>(field, check);
+    if !valid {
+        Err(MRZParseError::InvalidChecksumField(kind))
+    } else {
+        Ok(data)
+    }
+}
 use crate::{
     MRZChecksumError, MRZFormat, MRZParseError, MrzIcaoCommon, MrzIcaoTd3, ParsedMRZ,
     ICAO_COMMON_COUNTRY_CODE_LEN, ICAO_COMMON_DATE_LEN, ICAO_COMMON_DOC_NUM_MAX_LEN,
@@ -45,14 +57,6 @@ fn compute_composite_checksum<'a>(segments: &[&'a [u8]], check_digit: u8) -> Opt
     } else {
         None
     }
-}
-
-fn decode_mrz_filler<const N: usize>(slice: &[u8]) -> String<N> {
-    let mut out = String::new();
-    for &b in slice {
-        let _ = out.push(if b == b'<' { ' ' } else { b as char });
-    }
-    out
 }
 
 fn checked_field<const N: usize>(field: &[u8], check_digit: u8) -> ([u8; N], bool) {
@@ -162,16 +166,13 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> Result<ParsedMRZ, MRZParseError> {
     const NAME_START: usize = 5;
     const NAME_END: usize = 44;
 
-    let (doc_num_array, doc_valid) = checked_field::<ICAO_COMMON_DOC_NUM_MAX_LEN>(
+    let doc_num_array = parse_checked_field::<ICAO_COMMON_DOC_NUM_MAX_LEN>(
         &line2[DOC_NUM_START..DOC_NUM_END],
         line2[DOC_NUM_CHECK],
-    );
+        MRZChecksumError::DocumentNumber,
+    )?;
+    let doc_valid = true;
     let document_number = decode_range::<ICAO_COMMON_DOC_NUM_MAX_LEN>(&doc_num_array);
-    if !doc_valid {
-        return Err(MRZParseError::InvalidChecksumField(
-            MRZChecksumError::DocumentNumber,
-        ));
-    }
 
     let birth_date_slice = &line2[BIRTH_DATE_START..BIRTH_DATE_END];
     let birth_date_check = line2[BIRTH_DATE_CHECK];
@@ -280,15 +281,12 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> Result<ParsedMRZ, MRZP
     let issuing_state =
         fixed_slice::<ICAO_COMMON_COUNTRY_CODE_LEN>(&line1[ISSUER_START..ISSUER_END]);
 
-    let (doc_num_array, doc_valid) = checked_field::<ICAO_COMMON_DOC_NUM_MAX_LEN>(
+    let doc_num_array = parse_checked_field::<ICAO_COMMON_DOC_NUM_MAX_LEN>(
         &line1[DOC_NUM_START..DOC_NUM_END],
         line1[DOC_NUM_CHECK],
-    );
-    if !doc_valid {
-        return Err(MRZParseError::InvalidChecksumField(
-            MRZChecksumError::DocumentNumber,
-        ));
-    }
+        MRZChecksumError::DocumentNumber,
+    )?;
+    let doc_valid = true;
     let document_number = decode_range::<ICAO_COMMON_DOC_NUM_MAX_LEN>(&doc_num_array);
 
     let optional_data1 = decode_range::<15>(&line1[OPTIONAL1_START..OPTIONAL1_END]);
