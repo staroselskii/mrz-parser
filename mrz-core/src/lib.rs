@@ -39,15 +39,11 @@ macro_rules! delegate_common_fields {
 struct MrzIcaoCommon {
     sex: u8,
     document_number: String<ICAO_COMMON_DOC_NUM_MAX_LEN>,
-    document_number_check: u8,
     document_number_check_valid: bool,
     birth_date: [u8; ICAO_COMMON_DATE_LEN],
-    birth_date_check: u8,
     birth_date_check_valid: bool,
     expiry_date: [u8; ICAO_COMMON_DATE_LEN],
-    expiry_date_check: u8,
     expiry_date_check_valid: bool,
-    final_check: Option<u8>,
     final_check_valid: Option<bool>,
 }
 
@@ -86,7 +82,7 @@ pub struct MrzIcaoTd3 {
     pub nationality: [u8; ICAO_COMMON_COUNTRY_CODE_LEN],
     pub optional_data1: String<ICAO_TD3_OPTIONAL1_MAX_LEN>,
     pub optional_data2: String<ICAO_TD3_OPTIONAL2_MAX_LEN>,
-    pub common: MrzIcaoCommon,
+    common: MrzIcaoCommon,
 }
 
 impl MrzIcaoCommonFields for MrzIcaoTd3 {
@@ -105,7 +101,7 @@ pub struct MrzIcaoTd1 {
     pub nationality: [u8; ICAO_COMMON_COUNTRY_CODE_LEN],
     pub optional_data1: String<ICAO_TD1_OPTIONAL1_MAX_LEN>,
     pub optional_data2: String<ICAO_TD1_OPTIONAL2_MAX_LEN>,
-    pub common: MrzIcaoCommon,
+    common: MrzIcaoCommon,
 }
 
 impl MrzIcaoCommonFields for MrzIcaoTd1 {
