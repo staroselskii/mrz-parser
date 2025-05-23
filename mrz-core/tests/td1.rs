@@ -26,6 +26,8 @@ fn test_valid_td1_without_final_check() {
             mrz.is_document_number_valid(),
             "Document number check failed"
         );
+        assert_eq!(mrz.given_names(), "ANNA MARIA", "Given names did not match");
+        assert_eq!(mrz.surname(), "ERIKSSON", "Surnames did not match");
     }
 }
 
@@ -72,6 +74,9 @@ fn test_valid_td1_with_final_check_1() {
             Some(true),
             "Final check missing or incorrect"
         );
+        dbg!(&mrz);
+        assert_eq!(mrz.given_names(), "ANNA MARIA", "Given names did not match");
+        assert_eq!(mrz.surname(), "ERIKSSON", "Surnames did not match");
     }
 }
 #[test]
@@ -100,5 +105,7 @@ fn test_valid_td1_with_final_check_2() {
             mrz.is_birth_date_valid(),
             "Final check missing or incorrect"
         );
+        assert_eq!(mrz.given_names(), "ANNA MARIA", "Given names did not match");
+        assert_eq!(mrz.surname(), "ERIKSSON", "Surnames did not match");
     }
 }

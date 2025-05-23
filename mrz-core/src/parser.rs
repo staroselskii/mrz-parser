@@ -3,6 +3,7 @@ use crate::{
     ICAO_COMMON_COUNTRY_CODE_LEN, ICAO_COMMON_DATE_LEN, ICAO_COMMON_DOC_NUM_MAX_LEN,
     ICAO_TD1_OPTIONAL1_MAX_LEN, ICAO_TD1_OPTIONAL2_MAX_LEN, ICAO_TD3_NAME_MAX_LEN,
 };
+use core::fmt::Write;
 use heapless::String;
 
 fn compute_checksum(data: &[u8]) -> u8 {
@@ -72,6 +73,27 @@ fn decode_range<const N: usize>(slice: &[u8]) -> String<N> {
     out
 }
 
+fn decode_mrz_td_name<const N: usize>(raw: &str) -> String<N> {
+    let mut given_names_buf: String<N> = String::new();
+    let mut parts = raw.split("<<");
+    let surname = parts.next().unwrap_or("").trim_end();
+    let given = parts.next().unwrap_or("");
+
+    for c in given.chars() {
+        let ch = if c == '<' { ' ' } else { c };
+        let _ = given_names_buf.push(ch);
+    }
+    while given_names_buf.ends_with(' ') {
+        given_names_buf.pop();
+    }
+
+    let mut full_name: String<N> = String::new();
+    let _ = write!(full_name, "{}<<{}", surname, given_names_buf);
+    full_name
+}
+
+/// Detects the MRZ format (e.g., TD1, TD3) based on the provided lines.
+/// Returns `MRZFormat::Unknown` if the format cannot be determined.
 pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
     if lines.len() == 2
         && lines[0].starts_with(b"P")
@@ -92,6 +114,8 @@ pub fn detect_format(lines: &[&[u8]]) -> MRZFormat {
     }
 }
 
+/// Parses any supported MRZ format from the provided lines.
+/// Returns an error if the format is unknown or the lines are malformed.
 pub fn parse_any(lines: &[&[u8]]) -> Result<ParsedMRZ, MRZParseError> {
     match detect_format(lines) {
         MRZFormat::MrzIcaoTd3 => {
@@ -142,6 +166,7 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> Result<ParsedMRZ, MRZParseError> {
         &line2[DOC_NUM_START..DOC_NUM_END],
         line2[DOC_NUM_CHECK],
     );
+    let document_number = decode_range::<ICAO_COMMON_DOC_NUM_MAX_LEN>(&doc_num_array);
     if !doc_valid {
         return Err(MRZParseError::InvalidChecksumField(
             MRZChecksumError::DocumentNumber,
@@ -183,8 +208,8 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> Result<ParsedMRZ, MRZParseError> {
         }
     }
 
-    let document_number = decode_mrz_filler::<ICAO_COMMON_DOC_NUM_MAX_LEN>(&doc_num_array);
-    let name = decode_mrz_filler::<ICAO_TD3_NAME_MAX_LEN>(&line1[NAME_START..NAME_END]);
+    let raw_name = decode_range::<ICAO_TD3_NAME_MAX_LEN>(&line1[NAME_START..NAME_END]);
+    let name = decode_mrz_td_name::<ICAO_TD3_NAME_MAX_LEN>(&raw_name);
 
     let optional_data1 =
         decode_range::<ICAO_TD1_OPTIONAL1_MAX_LEN>(&line2[28..43.min(line2.len())]);
@@ -310,12 +335,13 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> Result<ParsedMRZ, MRZP
         }
     }
 
-    let name = decode_mrz_filler::<ICAO_TD1_NAME_MAX_LEN>(&line3[NAME_START..NAME_END]);
+    let raw_name = decode_range::<ICAO_TD1_NAME_MAX_LEN>(&line3[NAME_START..NAME_END]);
+    let full_name = decode_mrz_td_name::<ICAO_TD1_NAME_MAX_LEN>(&raw_name);
 
     Ok(ParsedMRZ::MrzIcaoTd1(MrzIcaoTd1 {
         document_code,
         issuing_state,
-        name,
+        name: full_name,
         nationality,
         optional_data1: optional_data1.clone(),
         optional_data2: optional_data2.clone(),
