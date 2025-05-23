@@ -1,4 +1,4 @@
-use mrz_core::{parser::parse_any, ParsedMRZ};
+use mrz_core::{parser::parse_any, MrzIcaoCommonFields, ParsedMRZ};
 
 #[test]
 fn test_valid_td1_without_final_check() {
@@ -15,14 +15,15 @@ fn test_valid_td1_without_final_check() {
         result
     );
     if let Ok(ParsedMRZ::MrzIcaoTd1(mrz)) = result {
-        assert!(mrz.birth_date_check_valid, "Birth date check failed");
-        assert!(mrz.expiry_date_check_valid, "Expiry date check failed");
+        assert!(mrz.is_birth_date_valid(), "Birth date check failed");
+        assert!(mrz.is_expiry_date_valid(), "Expiry date check failed");
         assert_eq!(
-            mrz.final_check_valid, None,
+            mrz.is_final_check_valid(),
+            None,
             "Final check unexpectedly present"
         );
         assert!(
-            mrz.document_number_check_valid,
+            mrz.is_document_number_valid(),
             "Document number check failed"
         );
     }
@@ -44,15 +45,16 @@ fn test_invalid_td1_sample() {
     );
     if let Ok(ParsedMRZ::MrzIcaoTd1(mrz)) = result {
         assert!(
-            !mrz.birth_date_check_valid,
+            !mrz.is_birth_date_valid(),
             "Birth date check should have failed"
         );
         assert!(
-            !mrz.expiry_date_check_valid,
+            !mrz.is_expiry_date_valid(),
             "Expiry date check should have failed"
         );
         assert_eq!(
-            mrz.final_check_valid, None,
+            mrz.is_final_check_valid(),
+            None,
             "Final check unexpectedly present"
         );
     }
@@ -75,13 +77,13 @@ fn test_valid_td1_with_final_check_1() {
     );
     if let Ok(ParsedMRZ::MrzIcaoTd1(mrz)) = result {
         assert!(
-            mrz.document_number_check_valid,
+            mrz.is_document_number_valid(),
             "Document number check failed"
         );
-        assert!(mrz.birth_date_check_valid, "Birth date check failed");
-        assert!(mrz.expiry_date_check_valid, "Expiry date check failed");
+        assert!(mrz.is_birth_date_valid(), "Birth date check failed");
+        assert!(mrz.is_expiry_date_valid(), "Expiry date check failed");
         assert_eq!(
-            mrz.final_check_valid,
+            mrz.is_final_check_valid(),
             Some(true),
             "Final check missing or incorrect"
         );
@@ -104,14 +106,13 @@ fn test_valid_td1_with_final_check_2() {
     );
     if let Ok(ParsedMRZ::MrzIcaoTd1(mrz)) = result {
         assert!(
-            mrz.document_number_check_valid,
+            mrz.is_document_number_valid(),
             "Document number check failed"
         );
-        assert!(mrz.birth_date_check_valid, "Birth date check failed");
-        assert!(mrz.expiry_date_check_valid, "Expiry date check failed");
-        assert_eq!(
-            mrz.final_check_valid,
-            Some(true),
+        assert!(mrz.is_birth_date_valid(), "Birth date check failed");
+        assert!(mrz.is_expiry_date_valid(), "Expiry date check failed");
+        assert!(
+            mrz.is_birth_date_valid(),
             "Final check missing or incorrect"
         );
     }

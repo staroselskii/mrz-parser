@@ -1,4 +1,4 @@
-use mrz_core::{parser::parse_any, MRZParseError, ParsedMRZ};
+use mrz_core::{parser::parse_any, MRZParseError, MrzIcaoCommonFields, ParsedMRZ};
 use time::{Date, Month};
 
 #[derive(Debug)]
@@ -24,13 +24,13 @@ pub struct MrzIcaoTd1 {
     pub document_number: String,
     pub nationality: String,
     pub birth_date: Option<Date>,
-    pub birth_date_check: char,
+    pub birth_date_check: bool,
     pub sex: char,
     pub expiry_date: Option<Date>,
-    pub expiry_date_check: char,
+    pub expiry_date_check: bool,
     pub optional_data1: String,
     pub optional_data2: String,
-    pub final_check: char,
+    pub final_check: Option<bool>,
 }
 
 fn normalize_lines(lines: &[&str]) -> Vec<Vec<u8>> {
@@ -59,25 +59,25 @@ pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
 
     match parsed {
         ParsedMRZ::MrzIcaoTd3(raw) => Ok(MRZ::IcaoTd3(MrzIcaoTd3 {
-            document_number: raw.document_number.to_string(),
+            document_number: parse_str_field(raw.document_number()),
             name: raw.name.to_string(),
-            birth_date: parse_mrz_date(&raw.birth_date),
-            expiry_date: parse_mrz_date(&raw.expiry_date),
+            birth_date: parse_mrz_date(&raw.birth_date()),
+            expiry_date: parse_mrz_date(&raw.expiry_date()),
         })),
         ParsedMRZ::MrzIcaoTd1(raw) => Ok(MRZ::IcaoTd1(MrzIcaoTd1 {
             document_code: parse_field(&raw.document_code),
             issuing_state: parse_field(&raw.issuing_state),
             name: raw.name.to_string(),
-            document_number: raw.document_number.to_string(),
+            document_number: parse_str_field(raw.document_number()),
             nationality: parse_field(&raw.nationality),
-            birth_date: parse_mrz_date(&raw.birth_date),
-            birth_date_check: raw.birth_date_check as char,
-            sex: raw.sex as char,
-            expiry_date: parse_mrz_date(&raw.expiry_date),
-            expiry_date_check: raw.expiry_date_check as char,
+            birth_date: parse_mrz_date(&raw.birth_date()),
+            birth_date_check: raw.is_birth_date_valid(),
+            sex: raw.sex() as char,
+            expiry_date: parse_mrz_date(&raw.expiry_date()),
+            expiry_date_check: raw.is_expiry_date_valid(),
             optional_data1: raw.optional_data1.to_string(),
             optional_data2: raw.optional_data2.to_string(),
-            final_check: raw.final_check.map(|b| b as char).unwrap_or('<'),
+            final_check: raw.is_final_check_valid(),
         })),
         ParsedMRZ::Unknown => Ok(MRZ::Unknown),
     }
@@ -88,6 +88,10 @@ fn parse_field(bytes: &[u8]) -> String {
         .unwrap_or("")
         .trim_end_matches('<')
         .to_string()
+}
+
+fn parse_str_field(s: &str) -> String {
+    s.trim_end_matches('<').to_string()
 }
 
 pub fn parse_mrz_date(raw: &[u8; 6]) -> Option<Date> {

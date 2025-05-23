@@ -1,5 +1,5 @@
 use mrz_core::parser::parse_any;
-use mrz_core::ParsedMRZ;
+use mrz_core::{MrzIcaoCommonFields, ParsedMRZ};
 
 #[test]
 fn test_valid_td3_wo_final_checksum() {
@@ -24,19 +24,19 @@ fn test_valid_td3_with_final_checksum() {
     );
     if let Ok(ParsedMRZ::MrzIcaoTd3(mrz)) = result {
         assert!(
-            mrz.document_number_check_valid,
+            mrz.is_document_number_valid(),
             "Document number check should have passed"
         );
         assert!(
-            mrz.birth_date_check_valid,
+            mrz.is_birth_date_valid(),
             "Birth date check should have passed"
         );
         assert!(
-            mrz.expiry_date_check_valid,
+            mrz.is_expiry_date_valid(),
             "Expiry date check should have passed"
         );
         assert_eq!(
-            mrz.final_check_valid,
+            mrz.is_final_check_valid(),
             Some(true),
             "Final check digit should be present and correct"
         );
@@ -52,7 +52,7 @@ fn test_invalid_td3_final_checksum() {
     let result = parse_any(&[line1, line2]);
     if let Ok(ParsedMRZ::MrzIcaoTd3(mrz)) = result {
         assert_eq!(
-            mrz.final_check_valid,
+            mrz.is_final_check_valid(),
             Some(false),
             "Final check digit should be present and incorrect"
         );
@@ -68,21 +68,19 @@ fn test_invalid_td3_checksums() {
     let result = parse_any(&[line1, line2]);
     if let Ok(ParsedMRZ::MrzIcaoTd3(mrz)) = result {
         assert!(
-            !mrz.document_number_check_valid,
+            !mrz.is_document_number_valid(),
             "Document number check should have failed"
         );
         assert!(
-            !mrz.birth_date_check_valid
-            ,
+            !mrz.is_birth_date_valid(),
             "Birth date check should have failed"
         );
         assert!(
-            !mrz.expiry_date_check_valid
-            ,
+            !mrz.is_expiry_date_valid(),
             "Expiry date check should have failed"
         );
         assert_eq!(
-            mrz.final_check_valid,
+            mrz.is_final_check_valid(),
             Some(false),
             "Final check digit should be present and incorrect"
         );
