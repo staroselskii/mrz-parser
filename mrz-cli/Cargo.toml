@@ -4,5 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-mrz-host = { path = "../mrz-host" }
-mrz-core = { path = "../mrz-core" }
+mrz-parser = { path = "../mrz-parser" }

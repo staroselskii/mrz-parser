@@ -12,7 +12,20 @@ categories = ["parser-implementations", "authentication"]
 [dependencies]
 mrz-core = { path = "../mrz-core", default-features = false }
 mrz-host = { path = "../mrz-host", optional = true }
+uniffi_bindgen = "0.29.2"
+uniffi = "0.29.2"
+uniffi_macros = "0.29.2"
+thiserror = "1"
 
 [features]
 default = ["std"]
 std = ["mrz-core/std", "mrz-host"]
+uniffi = []
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+name = "mrz_parser"
+
+[build-dependencies]
+uniffi_build = "0.29.2"
+uniffi = "0.29.2"

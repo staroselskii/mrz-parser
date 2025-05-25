@@ -7,3 +7,8 @@ pub use mrz_host::{
     parse_mrz_date_with_reference,
     MRZ, // Rich enum
 };
+
+#[cfg(feature = "uniffi")]
+pub mod uniffi_api;
+#[cfg(feature = "uniffi")]
+uniffi_macros::setup_scaffolding!();

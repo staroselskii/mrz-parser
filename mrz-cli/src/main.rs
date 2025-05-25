@@ -1,5 +1,5 @@
-use mrz_host::parse_lines;
-use mrz_host::MRZ;
+use mrz_parser::parse_lines;
+use mrz_parser::MRZ;
 
 fn main() {
     let td3 = [
