@@ -32,7 +32,6 @@ pub enum MrzParseError {
     Utf8Error,
 }
 
-
 #[export]
 pub fn parse_lines(lines: Vec<String>) -> Result<MrzResult, MrzParseError> {
     let strs: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();

@@ -6,7 +6,6 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-extern crate heapless;
 use heapless::String;
 use heapless::Vec;
 
@@ -46,79 +45,7 @@ fn split_name_field<const N: usize>(name_field: &str) -> (String<N>, String<N>) 
     (surname, given_names)
 }
 
-/// Delegates common field accessors for a struct implementing `MrzIcaoCommonFields`.
-#[macro_export]
-macro_rules! delegate_common_fields {
-    ($field:ident) => {
-        /// Returns the sex field value as a single ASCII byte (e.g., 'M', 'F', or '<').
-        fn sex(&self) -> u8 {
-            self.$field.sex
-        }
-        /// Returns the document number as a string slice.
-        fn document_number(&self) -> &str {
-            &self.$field.document_number
-        }
-        /// Returns the birth date as a byte array (YYMMDD).
-        fn birth_date(&self) -> &[u8; ICAO_COMMON_DATE_LEN] {
-            &self.$field.birth_date
-        }
-        /// Returns the expiry date as a byte array (YYMMDD).
-        fn expiry_date(&self) -> &[u8; ICAO_COMMON_DATE_LEN] {
-            &self.$field.expiry_date
-        }
-        /// Returns whether the document number passed checksum validation.
-        fn is_document_number_valid(&self) -> bool {
-            self.$field.document_number_check_valid
-        }
-        /// Returns whether the birth date passed checksum validation.
-        fn is_birth_date_valid(&self) -> bool {
-            self.$field.birth_date_check_valid
-        }
-        /// Returns whether the expiry date passed checksum validation.
-        fn is_expiry_date_valid(&self) -> bool {
-            self.$field.expiry_date_check_valid
-        }
-        /// Returns whether the final checksum passed validation, if applicable.
-        fn is_final_check_valid(&self) -> Option<bool> {
-            self.$field.final_check_valid
-        }
-    };
-}
-
-struct MrzIcaoCommon {
-    sex: u8,
-    document_number: String<ICAO_COMMON_DOC_NUM_MAX_LEN>,
-    document_number_check_valid: bool,
-    birth_date: [u8; ICAO_COMMON_DATE_LEN],
-    birth_date_check_valid: bool,
-    expiry_date: [u8; ICAO_COMMON_DATE_LEN],
-    expiry_date_check_valid: bool,
-    final_check_valid: Option<bool>,
-}
-
-#[cfg_attr(not(feature = "std"), derive(Debug))]
-impl core::fmt::Debug for MrzIcaoCommon {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let birth = core::str::from_utf8(&self.birth_date).unwrap_or("??");
-        let expiry = core::str::from_utf8(&self.expiry_date).unwrap_or("??");
-
-        f.debug_struct("MrzIcaoCommon")
-            .field("sex", &self.sex)
-            .field("document_number", &self.document_number)
-            .field(
-                "document_number_check_valid",
-                &self.document_number_check_valid,
-            )
-            .field("birth_date", &birth)
-            .field("birth_date_check_valid", &self.birth_date_check_valid)
-            .field("expiry_date", &expiry)
-            .field("expiry_date_check_valid", &self.expiry_date_check_valid)
-            .field("final_check_valid", &self.final_check_valid)
-            .finish()
-    }
-}
-
-/// Common field interface shared across ICAO MRZ formats (TD1, TD3).
+/// Common field interface shared across ICAO MRZ formats (TD1, TD3), implemented for `MrzIcao<...>`.
 pub trait MrzIcaoCommonFields {
     /// Returns the sex field value as a single ASCII byte (e.g., 'M', 'F', or '<').
     fn sex(&self) -> u8;
@@ -140,6 +67,10 @@ pub trait MrzIcaoCommonFields {
     fn surname(&self) -> String<ICAO_TD3_NAME_MAX_LEN>;
     /// Returns the given names parsed from the name field.
     fn given_names(&self) -> String<ICAO_TD3_NAME_MAX_LEN>;
+    /// Returns the issuing state or organization as a 3-character country code.
+    fn issuing_state(&self) -> &[u8; ICAO_COMMON_COUNTRY_CODE_LEN];
+    /// Returns the nationality as a 3-character country code.
+    fn nationality(&self) -> &[u8; ICAO_COMMON_COUNTRY_CODE_LEN];
 }
 
 /// Parsed MRZ format variants.
@@ -179,48 +110,113 @@ pub const ICAO_TD3_OPTIONAL1_MAX_LEN: usize = 15;
 /// Maximum length of optional data field 2 in ICAO TD3 format.
 pub const ICAO_TD3_OPTIONAL2_MAX_LEN: usize = 11;
 
-/// ICAO TD3 document representation.
-pub struct MrzIcaoTd3 {
-    /// Document code (2 characters).
+/// Generic ICAO document representation parameterized by length constants.
+pub struct MrzIcao<const NAME_LEN: usize, const OPT1_LEN: usize, const OPT2_LEN: usize> {
+    /// Document code (e.g., "P<" for passport).
     pub document_code: [u8; ICAO_COMMON_DOC_CODE_LEN],
-    /// Issuing state or organization (3 characters).
+    /// Issuing country or organization code (3-letter).
     pub issuing_state: [u8; ICAO_COMMON_COUNTRY_CODE_LEN],
-    /// Name field containing surname and given names.
-    pub name: String<ICAO_TD3_NAME_MAX_LEN>,
-    /// Nationality (3 characters).
+    /// Raw MRZ name field (surname and given names separated by `<<`).
+    pub name: String<NAME_LEN>,
+    /// Nationality country code (3-letter).
     pub nationality: [u8; ICAO_COMMON_COUNTRY_CODE_LEN],
-    /// Optional data field 1.
-    pub optional_data1: String<ICAO_TD3_OPTIONAL1_MAX_LEN>,
-    /// Optional data field 2.
-    pub optional_data2: String<ICAO_TD3_OPTIONAL2_MAX_LEN>,
-    common: MrzIcaoCommon,
+    /// Sex character ('M', 'F', or '<').
+    pub sex: u8,
+    /// Document number.
+    pub document_number: String<ICAO_COMMON_DOC_NUM_MAX_LEN>,
+    /// Whether the document number passed checksum validation.
+    pub document_number_check_valid: bool,
+    /// Date of birth (YYMMDD).
+    pub birth_date: [u8; ICAO_COMMON_DATE_LEN],
+    /// Whether the birth date passed checksum validation.
+    pub birth_date_check_valid: bool,
+    /// Expiry date (YYMMDD).
+    pub expiry_date: [u8; ICAO_COMMON_DATE_LEN],
+    /// Whether the expiry date passed checksum validation.
+    pub expiry_date_check_valid: bool,
+    /// Whether the final check digit passed validation, if applicable.
+    pub final_check_valid: Option<bool>,
+    /// First optional data field.
+    pub optional_data1: String<OPT1_LEN>,
+    /// Second optional data field.
+    pub optional_data2: String<OPT2_LEN>,
 }
 
+/// ICAO MRZ TD3 document type (e.g., passport), with fixed field lengths.
+pub type MrzIcaoTd3 =
+    MrzIcao<ICAO_TD3_NAME_MAX_LEN, ICAO_TD3_OPTIONAL1_MAX_LEN, ICAO_TD3_OPTIONAL2_MAX_LEN>;
+
 #[cfg_attr(not(feature = "std"), derive(Debug))]
-impl core::fmt::Debug for MrzIcaoTd3 {
+impl<const NAME_LEN: usize, const OPT1_LEN: usize, const OPT2_LEN: usize> core::fmt::Debug
+    for MrzIcao<NAME_LEN, OPT1_LEN, OPT2_LEN>
+{
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("MrzIcaoTd3")
+        let birth = core::str::from_utf8(&self.birth_date).unwrap_or("??");
+        let expiry = core::str::from_utf8(&self.expiry_date).unwrap_or("??");
+
+        f.debug_struct("MrzIcao")
             .field("document_code", &self.document_code)
             .field("issuing_state", &self.issuing_state)
             .field("name", &self.name)
             .field("surname", &self.surname())
             .field("given_names", &self.given_names())
             .field("nationality", &self.nationality)
+            .field("sex", &self.sex)
+            .field("document_number", &self.document_number)
+            .field(
+                "document_number_check_valid",
+                &self.document_number_check_valid,
+            )
+            .field("birth_date", &birth)
+            .field("birth_date_check_valid", &self.birth_date_check_valid)
+            .field("expiry_date", &expiry)
+            .field("expiry_date_check_valid", &self.expiry_date_check_valid)
+            .field("final_check_valid", &self.final_check_valid)
             .field("optional_data1", &self.optional_data1)
             .field("optional_data2", &self.optional_data2)
-            .field("common", &self.common)
             .finish()
     }
 }
 
-impl MrzIcaoCommonFields for MrzIcaoTd3 {
-    delegate_common_fields!(common);
+impl<const NAME_LEN: usize, const OPT1_LEN: usize, const OPT2_LEN: usize> MrzIcaoCommonFields
+    for MrzIcao<NAME_LEN, OPT1_LEN, OPT2_LEN>
+{
+    fn sex(&self) -> u8 {
+        self.sex
+    }
+    fn document_number(&self) -> &str {
+        &self.document_number
+    }
+    fn birth_date(&self) -> &[u8; ICAO_COMMON_DATE_LEN] {
+        &self.birth_date
+    }
+    fn expiry_date(&self) -> &[u8; ICAO_COMMON_DATE_LEN] {
+        &self.expiry_date
+    }
+    fn is_document_number_valid(&self) -> bool {
+        self.document_number_check_valid
+    }
+    fn is_birth_date_valid(&self) -> bool {
+        self.birth_date_check_valid
+    }
+    fn is_expiry_date_valid(&self) -> bool {
+        self.expiry_date_check_valid
+    }
+    fn is_final_check_valid(&self) -> Option<bool> {
+        self.final_check_valid
+    }
 
     fn surname(&self) -> String<ICAO_TD3_NAME_MAX_LEN> {
         split_name_field(&self.name).0
     }
     fn given_names(&self) -> String<ICAO_TD3_NAME_MAX_LEN> {
         split_name_field(&self.name).1
+    }
+    fn issuing_state(&self) -> &[u8; ICAO_COMMON_COUNTRY_CODE_LEN] {
+        &self.issuing_state
+    }
+    fn nationality(&self) -> &[u8; ICAO_COMMON_COUNTRY_CODE_LEN] {
+        &self.nationality
     }
 }
 
@@ -231,50 +227,9 @@ pub const ICAO_TD1_OPTIONAL1_MAX_LEN: usize = 15;
 /// Maximum length of optional data field 2 in ICAO TD1 format.
 pub const ICAO_TD1_OPTIONAL2_MAX_LEN: usize = 11;
 
-/// ICAO TD1 document representation.
-pub struct MrzIcaoTd1 {
-    /// Document code (2 characters).
-    pub document_code: [u8; ICAO_COMMON_DOC_CODE_LEN],
-    /// Issuing state or organization (3 characters).
-    pub issuing_state: [u8; ICAO_COMMON_COUNTRY_CODE_LEN],
-    /// Name field containing surname and given names.
-    pub name: String<ICAO_TD1_NAME_MAX_LEN>,
-    /// Nationality (3 characters).
-    pub nationality: [u8; ICAO_COMMON_COUNTRY_CODE_LEN],
-    /// Optional data field 1.
-    pub optional_data1: String<ICAO_TD1_OPTIONAL1_MAX_LEN>,
-    /// Optional data field 2.
-    pub optional_data2: String<ICAO_TD1_OPTIONAL2_MAX_LEN>,
-    common: MrzIcaoCommon,
-}
-
-#[cfg_attr(not(feature = "std"), derive(Debug))]
-impl core::fmt::Debug for MrzIcaoTd1 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("MrzIcaoTd1")
-            .field("document_code", &self.document_code)
-            .field("issuing_state", &self.issuing_state)
-            .field("name", &self.name)
-            .field("surname", &self.surname())
-            .field("given_names", &self.given_names())
-            .field("nationality", &self.nationality)
-            .field("optional_data1", &self.optional_data1)
-            .field("optional_data2", &self.optional_data2)
-            .field("common", &self.common)
-            .finish()
-    }
-}
-
-impl MrzIcaoCommonFields for MrzIcaoTd1 {
-    delegate_common_fields!(common);
-
-    fn surname(&self) -> String<ICAO_TD3_NAME_MAX_LEN> {
-        split_name_field(&self.name).0
-    }
-    fn given_names(&self) -> String<ICAO_TD3_NAME_MAX_LEN> {
-        split_name_field(&self.name).1
-    }
-}
+/// ICAO MRZ TD1 document type (e.g., ID card), with fixed field lengths.
+pub type MrzIcaoTd1 =
+    MrzIcao<ICAO_TD1_NAME_MAX_LEN, ICAO_TD1_OPTIONAL1_MAX_LEN, ICAO_TD1_OPTIONAL2_MAX_LEN>;
 
 /// MRZ document format types.
 #[derive(Debug, PartialEq, Eq)]

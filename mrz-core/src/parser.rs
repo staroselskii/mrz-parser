@@ -11,7 +11,7 @@ fn parse_checked_field<const N: usize>(
     }
 }
 use crate::{
-    MRZChecksumError, MRZFormat, MRZParseError, MrzIcaoCommon, MrzIcaoTd3, ParsedMRZ,
+    MRZChecksumError, MRZFormat, MRZParseError, MrzIcaoTd3, ParsedMRZ,
     ICAO_COMMON_COUNTRY_CODE_LEN, ICAO_COMMON_DATE_LEN, ICAO_COMMON_DOC_NUM_MAX_LEN,
     ICAO_TD1_OPTIONAL1_MAX_LEN, ICAO_TD1_OPTIONAL2_MAX_LEN, ICAO_TD3_NAME_MAX_LEN,
 };
@@ -223,16 +223,14 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> Result<ParsedMRZ, MRZParseError> {
         issuing_state: fixed_slice::<3>(&line1[2..5]),
         nationality: fixed_slice::<3>(&line2[15..18]),
         name,
-        common: MrzIcaoCommon {
-            document_number,
-            document_number_check_valid: doc_valid,
-            birth_date,
-            birth_date_check_valid: birth_valid,
-            expiry_date,
-            expiry_date_check_valid: expiry_valid,
-            final_check_valid: Some(true),
-            sex,
-        },
+        document_number,
+        document_number_check_valid: doc_valid,
+        birth_date,
+        birth_date_check_valid: birth_valid,
+        expiry_date,
+        expiry_date_check_valid: expiry_valid,
+        final_check_valid: Some(true),
+        sex,
         optional_data1: optional_data1.clone(),
         optional_data2: optional_data2.clone(),
     }))
@@ -343,15 +341,13 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> Result<ParsedMRZ, MRZP
         nationality,
         optional_data1: optional_data1.clone(),
         optional_data2: optional_data2.clone(),
-        common: MrzIcaoCommon {
-            document_number,
-            document_number_check_valid: doc_valid,
-            birth_date,
-            birth_date_check_valid: birth_valid,
-            expiry_date,
-            expiry_date_check_valid: expiry_valid,
-            final_check_valid: Some(true),
-            sex,
-        },
+        document_number,
+        document_number_check_valid: doc_valid,
+        birth_date,
+        birth_date_check_valid: birth_valid,
+        expiry_date,
+        expiry_date_check_valid: expiry_valid,
+        final_check_valid: Some(true),
+        sex,
     }))
 }

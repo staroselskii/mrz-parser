@@ -56,6 +56,13 @@ fn test_invalid_td3_final_checksum() {
             Some(false),
             "Final check digit should be present and incorrect"
         );
+        assert_eq!(mrz.document_number(), "L898902C3");
+        assert_eq!(mrz.surname().to_string(), "ERIKSSON");
+        assert_eq!(mrz.given_names().to_string(), "ANNA MARIA");
+        assert_eq!(core::str::from_utf8(mrz.nationality()).unwrap(), "UTO");
+        assert_eq!(core::str::from_utf8(mrz.birth_date()).unwrap(), "740812");
+        assert_eq!(core::str::from_utf8(mrz.expiry_date()).unwrap(), "120415");
+        assert_eq!(mrz.sex(), b'F');
     }
 }
 
