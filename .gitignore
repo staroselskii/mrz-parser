@@ -1,0 +1,8 @@
+Cargo.lock
+MRZParserFFI.xcframework/
+Sources/
+swift/.build/
+swift/MRZParserFFI.xcframework/
+swift/Sources/MRZParserFFI/
+target/
+uniffi-gen/
