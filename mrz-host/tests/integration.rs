@@ -11,6 +11,8 @@ struct Sample {
     lines: Vec<String>,
     document_number: Option<String>,
     name: Option<String>,
+    surname: Option<String>,
+    given_names: Option<String>,
     birth_date: Option<String>,
     expiry_date: Option<String>,
     sex: Option<String>,
@@ -34,7 +36,13 @@ fn test_samples_valid() {
                     assert_eq!(mrz.document_number().trim_end_matches('<'), expected);
                 }
                 if let Some(expected) = sample.name.as_deref() {
-                    assert_eq!(mrz.name().trim(), expected);
+                    assert_eq!(mrz.full_name().trim(), expected);
+                }
+                if let Some(expected) = sample.surname.as_deref() {
+                    assert_eq!(mrz.surname().trim(), expected);
+                }
+                if let Some(expected) = sample.given_names.as_deref() {
+                    assert_eq!(mrz.given_names().trim(), expected);
                 }
                 if let Some(expected) = sample.expiry_date.as_deref() {
                     assert_eq!(mrz.expiry_date().unwrap().to_string(), expected);
@@ -57,7 +65,13 @@ fn test_samples_valid() {
                     assert_eq!(mrz.document_number().trim_end_matches('<'), expected);
                 }
                 if let Some(expected) = sample.name.as_deref() {
-                    assert_eq!(mrz.name().trim(), expected);
+                    assert_eq!(mrz.full_name().trim(), expected);
+                }
+                if let Some(expected) = sample.surname.as_deref() {
+                    assert_eq!(mrz.surname().trim(), expected);
+                }
+                if let Some(expected) = sample.given_names.as_deref() {
+                    assert_eq!(mrz.given_names().trim(), expected);
                 }
                 if let Some(expected) = sample.birth_date.as_deref() {
                     assert_eq!(mrz.birth_date().unwrap().to_string(), expected);

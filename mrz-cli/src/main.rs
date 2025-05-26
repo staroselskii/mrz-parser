@@ -24,7 +24,7 @@ fn handle_parse(lines: &[&str]) {
     match parse_lines(lines) {
         Ok(MRZ::Icao(data)) => {
             println!("Document: {}", data.document_number());
-            println!("Name:     {}", data.name());
+            println!("Name:     {}", data.full_name());
             println!("Nationality:     {}", data.nationality());
             println!("Issuer:          {}", data.issuing_state());
             println!(

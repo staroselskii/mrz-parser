@@ -16,7 +16,9 @@ final class MRZParserWrapperTests: XCTestCase {
         let parsed = try parser.parse(lines: mrzLines)
 
         XCTAssertEqual(parsed.documentNumber, "D23145890")
-        XCTAssertEqual(parsed.name, "ERIKSSON<<ANNA MARIA")
+        XCTAssertEqual(parsed.surname, "ERIKSSON")
+        XCTAssertEqual(parsed.givenNames, "ANNA MARIA")
+        XCTAssertEqual(parsed.name, "ERIKSSON ANNA MARIA")
         XCTAssertEqual(parsed.nationality, "UTO")
         XCTAssertEqual(parsed.birthDate, parseMRZDate("1974-08-12"))
         XCTAssertEqual(parsed.expiryDate, parseMRZDate("2012-04-15"))

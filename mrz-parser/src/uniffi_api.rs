@@ -14,6 +14,8 @@ pub struct MrzResult {
     pub optional_data1: String,
     pub optional_data2: String,
     pub issuing_state: String,
+    pub given_names: String,
+    pub surname: String,
 }
 
 use thiserror::Error;
@@ -47,7 +49,7 @@ pub fn parse_lines(lines: Vec<String>) -> Result<MrzResult, MrzParseError> {
             MRZ::Icao(u) => Ok(MrzResult {
                 document_type: u.document_code().to_string(),
                 document_number: u.document_number().to_string(),
-                name: u.name().to_string(),
+                name: u.full_name().to_string(),
                 nationality: u.nationality().to_string(),
                 birth_date: u.birth_date().map_or("".into(), |d| d.to_string()),
                 sex: u.sex().to_string(),
@@ -55,6 +57,8 @@ pub fn parse_lines(lines: Vec<String>) -> Result<MrzResult, MrzParseError> {
                 optional_data1: u.optional_data1().to_string(),
                 optional_data2: u.optional_data2().to_string(),
                 issuing_state: u.issuing_state().to_string(),
+                given_names: u.given_names().to_string(),
+                surname: u.surname().to_string(),
             }),
             MRZ::Unknown => Err(MrzParseError::UnknownFormat),
         })

@@ -24,6 +24,8 @@ public enum MRZDocumentType {
 public struct MRZParsed {
     public let documentNumber: String
     public let name: String
+    public let givenNames: String
+    public let surname: String
     public let nationality: String
     public let birthDate: Date
     public let expiryDate: Date
@@ -49,6 +51,8 @@ public struct MRZParser {
             return MRZParsed(
                 documentNumber: result.documentNumber,
                 name: result.name,
+                givenNames: result.givenNames,
+                surname: result.surname,
                 nationality: result.nationality,
                 birthDate: parseMRZDate(result.birthDate),
                 expiryDate: parseMRZDate(result.expiryDate),

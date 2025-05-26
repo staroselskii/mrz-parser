@@ -37,7 +37,8 @@ pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
             let expiry_date_bytes = raw.expiry_date();
             Ok(MRZ::Icao(crate::model::MrzIcaoUnified::new(
                 parse_str_field(raw.document_number()),
-                raw.name.to_string(),
+                raw.surname().to_string(),
+                raw.given_names().to_string(),
                 parse_mrz_date_with_reference(birth_date_bytes, Some(expiry_date_bytes)),
                 parse_mrz_date_with_reference(expiry_date_bytes, None),
                 raw.sex() as char,
@@ -56,7 +57,8 @@ pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
             let expiry_date_bytes = raw.expiry_date();
             Ok(MRZ::Icao(crate::model::MrzIcaoUnified::new(
                 parse_str_field(raw.document_number()),
-                raw.name.to_string(),
+                raw.surname().to_string(),
+                raw.given_names().to_string(),
                 parse_mrz_date_with_reference(birth_date_bytes, Some(expiry_date_bytes)),
                 parse_mrz_date_with_reference(expiry_date_bytes, None),
                 raw.sex() as char,

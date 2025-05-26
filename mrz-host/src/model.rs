@@ -3,7 +3,8 @@ use time::Date;
 #[derive(Debug)]
 pub struct MrzIcaoUnified {
     document_number: String,
-    name: String,
+    surname: String,
+    given_names: String,
     birth_date: Option<Date>,
     expiry_date: Option<Date>,
     sex: char,
@@ -19,7 +20,8 @@ pub struct MrzIcaoUnified {
 impl MrzIcaoUnified {
     pub fn new(
         document_number: String,
-        name: String,
+        surname: String,
+        given_names: String,
         birth_date: Option<Date>,
         expiry_date: Option<Date>,
         sex: char,
@@ -33,7 +35,8 @@ impl MrzIcaoUnified {
     ) -> Self {
         Self {
             document_number,
-            name,
+            surname,
+            given_names,
             birth_date,
             expiry_date,
             sex,
@@ -50,8 +53,11 @@ impl MrzIcaoUnified {
     pub fn document_number(&self) -> &str {
         &self.document_number
     }
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn surname(&self) -> &str {
+        &self.surname
+    }
+    pub fn given_names(&self) -> &str {
+        &self.given_names
     }
     pub fn birth_date(&self) -> Option<Date> {
         self.birth_date
@@ -82,6 +88,10 @@ impl MrzIcaoUnified {
     }
     pub fn format(&self) -> &str {
         &self.format
+    }
+
+    pub fn full_name(&self) -> String {
+        format!("{} {}", self.surname, self.given_names)
     }
 }
 

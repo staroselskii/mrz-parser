@@ -8,6 +8,8 @@
     ],
     "document_number": "L898902C3",
     "name": "ERIKSSON  ANNA MARIA",
+    "surname": "ERIKSSON",
+    "given_names": "ANNA MARIA",
     "birth_date": "1974-08-12",
     "expiry_date": "2012-04-15",
     "sex": "F"
@@ -22,6 +24,8 @@
     ],
     "document_number": "D23145890",
     "name": "ERIKSSON  ANNA MARIA",
+    "surname": "ERIKSSON",
+    "given_names": "ANNA MARIA",
     "birth_date": "1974-08-12",
     "expiry_date": "2012-04-15",
     "sex": "F"
@@ -35,6 +39,8 @@
     ],
     "document_number": "123456789",
     "name": "THATCHER  MARGARET HILDA",
+    "surname": "THATCHER",
+    "given_names": "MARGARET HILDA",
     "birth_date": "1956-01-13",
     "expiry_date": "2025-01-01",
     "sex": "F"
@@ -49,6 +55,8 @@
     ],
     "document_number": "D12345678",
     "name": "DURAND  PIERRE LOUIS",
+    "surname": "DURAND",
+    "given_names": "PIERRE LOUIS",
     "birth_date": "1980-01-01",
     "expiry_date": "2025-01-01",
     "sex": "M"
@@ -63,6 +71,8 @@
     ],
     "document_number": "D23145890",
     "name": "ERIKSSON  ANNA MARIA",
+    "surname": "ERIKSSON",
+    "given_names": "ANNA MARIA",
     "birth_date": "1934-07-12",
     "expiry_date": "1995-07-12",
     "sex": "M"
@@ -76,6 +86,8 @@
     ],
     "document_number": "123456789",
     "name": "SMITH  JOHN ALBERT",
+    "surname": "SMITH",
+    "given_names": "JOHN ALBERT",
     "birth_date": "1969-01-01",
     "expiry_date": "2024-01-01",
     "sex": "M"
@@ -90,6 +102,8 @@
     ],
     "document_number": "123456789",
     "name": "DUPONT  JEAN PIERRE",
+    "surname": "DUPONT",
+    "given_names": "JEAN PIERRE",
     "birth_date": "1980-01-01",
     "expiry_date": "2024-01-01",
     "sex": "M"
