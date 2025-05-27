@@ -23,7 +23,7 @@ std = ["mrz-core/std", "mrz-host"]
 uniffi = []
 
 [lib]
-crate-type = ["rlib", "cdylib"]
+crate-type = ["rlib", "cdylib", "staticlib"]
 name = "mrz_parser"
 
 [build-dependencies]

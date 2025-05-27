@@ -12,6 +12,7 @@ let package = Package(
             name: "MRZParserFFI",
             targets: ["MRZParserFFI"]
         ),
+        .library(name: "MRZParserWrapper", targets: ["MRZParserWrapper"]),
     ],
     targets: [
         .binaryTarget(
