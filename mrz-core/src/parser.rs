@@ -18,32 +18,30 @@ use crate::{
 use core::fmt::Write;
 use heapless::String;
 
-fn compute_checksum(data: &[u8]) -> u8 {
-    fn char_value(c: u8) -> u8 {
+fn compute_checksum(data: &[u8]) -> Option<u8> {
+    fn char_value(c: u8) -> Option<u8> {
         match c {
-            b'0'..=b'9' => c - b'0',
-            b'A'..=b'Z' => c - b'A' + 10,
-            b'<' => 0,
-            _ => panic!("Unexpected character in MRZ for checksum: {:?}", c),
+            b'0'..=b'9' => Some(c - b'0'),
+            b'A'..=b'Z' => Some(c - b'A' + 10),
+            b'<' => Some(0),
+            _ => None,
         }
     }
     let weights = [7, 3, 1];
-    let sum = data
-        .iter()
-        .enumerate()
-        .map(|(i, &b)| {
-            let val = char_value(b);
-            let weight = weights[i % 3];
-            let product = val as u32 * weight as u32;
-            product
-        })
-        .sum::<u32>();
-
-    (sum % 10) as u8
+    let mut sum: u32 = 0;
+    for (i, &b) in data.iter().enumerate() {
+        let val = char_value(b)?;
+        let weight = weights[i % 3];
+        sum += val as u32 * weight as u32;
+    }
+    Some((sum % 10) as u8)
 }
 
 fn verify_checksum(data: &[u8], check_digit: u8) -> bool {
-    compute_checksum(data) == (check_digit - b'0')
+    match compute_checksum(data) {
+        Some(csum) => csum == (check_digit - b'0'),
+        None => false,
+    }
 }
 
 fn compute_composite_checksum<'a>(segments: &[&'a [u8]], check_digit: u8) -> Option<bool> {
@@ -52,8 +50,7 @@ fn compute_composite_checksum<'a>(segments: &[&'a [u8]], check_digit: u8) -> Opt
         for segment in segments {
             final_check_data.extend_from_slice(segment).ok()?;
         }
-        let is_valid = compute_checksum(&final_check_data) == (check_digit - b'0');
-        Some(is_valid)
+        compute_checksum(&final_check_data).map(|csum| csum == (check_digit - b'0'))
     } else {
         None
     }
