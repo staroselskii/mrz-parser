@@ -9,6 +9,8 @@
 use heapless::String;
 use heapless::Vec;
 
+/// MRZ checksum validation utilities.
+pub mod checksum;
 /// MRZ format parsing utilities and functions.
 pub mod parser;
 

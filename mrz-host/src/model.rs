@@ -126,7 +126,15 @@ impl MrzIcaoUnified {
         format!("{} {}", self.surname, self.given_names)
     }
 
-    pub fn from_common_fields<F>(source: &F, format: &str, surname: &str, given_names: &str, birth_date: Option<Date>, expiry_date: Option<Date>, sex: char) -> Self
+    pub fn from_common_fields<F>(
+        source: &F,
+        format: &str,
+        surname: &str,
+        given_names: &str,
+        birth_date: Option<Date>,
+        expiry_date: Option<Date>,
+        sex: char,
+    ) -> Self
     where
         F: mrz_core::MrzIcaoCommonFields,
     {
@@ -142,7 +150,11 @@ impl MrzIcaoUnified {
             sex,
             strip_fill(source.optional_data1()),
             strip_fill(source.optional_data2()),
-            if source.has_final_check() { Some(true) } else { None },
+            if source.has_final_check() {
+                Some(true)
+            } else {
+                None
+            },
             strip_fill(&String::from_utf8_lossy(source.nationality())),
             strip_fill(&String::from_utf8_lossy(source.issuing_state())),
             strip_fill(&String::from_utf8_lossy(source.document_code())),

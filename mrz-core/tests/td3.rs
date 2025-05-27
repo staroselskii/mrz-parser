@@ -1,4 +1,5 @@
 use mrz_core::parser::parse_any;
+use mrz_core::{MRZChecksumError, MRZParseError};
 use mrz_core::{MrzIcaoCommonFields, ParsedMRZ};
 
 #[test]
@@ -92,4 +93,101 @@ fn test_invalid_td3_checksums() {
             "Final check digit should be present and incorrect"
         );
     }
+}
+
+#[test]
+fn test_td3_with_missing_final_check_digit() {
+    let line1 = b"PPUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<";
+    let line2 = b"L898902C36UTO7408122F1204159ZE184226B<<<<<1<"; // '<' for final check
+
+    let result = parse_any(&[line1, line2]);
+    assert!(
+        matches!(result, Ok(ParsedMRZ::MrzIcaoTd3(_))),
+        "Expected ParsedMRZ::MrzIcaoTd3 with missing final check, got {:?}",
+        result
+    );
+    if let Ok(ParsedMRZ::MrzIcaoTd3(mrz)) = result {
+        assert_eq!(
+            mrz.is_final_check_valid(),
+            None,
+            "Final check digit should be treated as absent"
+        );
+    }
+}
+
+#[test]
+fn test_td3_with_ocr_error_in_expiry_date() {
+    let line1 = b"PPUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<";
+    let line2 = b"L898902C36UTO7408122F12O4159ZE184226B<<<<<10"; // 'O' instead of '0' in expiry
+
+    let result = parse_any(&[line1, line2]);
+    assert!(
+        matches!(
+            result,
+            Err(MRZParseError::InvalidChecksumField(
+                MRZChecksumError::ExpiryDate
+            ))
+        ),
+        "Expected InvalidChecksumField(ExpiryDate), got {:?}",
+        result
+    );
+}
+#[test]
+fn test_td3_with_common_ocr_errors_in_document_number() {
+    let line1 = b"PPUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<";
+    let variants = [
+        // 'O' instead of '0'
+        b"L8989O2C36UTO7408122F1204159ZE184226B<<<<<10",
+    ];
+
+    for &line2 in &variants {
+        let result = parse_any(&[line1, line2]);
+        assert!(
+            matches!(
+                result,
+                Err(MRZParseError::InvalidChecksumField(
+                    MRZChecksumError::DocumentNumber
+                ))
+            ),
+            "Expected InvalidChecksumField(DocumentNumber) for variant: {:?}, got {:?}",
+            std::str::from_utf8(line2),
+            result
+        );
+    }
+}
+#[test]
+fn test_td3_with_ocr_s_instead_of_5_in_document_number() {
+    // Document number XSZ9876546 is an OCR error for X5Z9876546 (which has check digit '6')
+    let line1 = b"PPUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<";
+    let line2 = b"XSZ9876546UTO7408122F1204159ZE184226B<<<<<10";
+
+    let result = parse_any(&[line1, line2]);
+    assert!(
+        matches!(
+            result,
+            Err(MRZParseError::InvalidChecksumField(
+                MRZChecksumError::DocumentNumber
+            ))
+        ),
+        "Expected InvalidChecksumField(DocumentNumber) with S->5 OCR error, got {:?}",
+        result
+    );
+}
+#[test]
+fn test_td3_with_ocr_i_instead_of_1_in_document_number() {
+    // Document number XIZ9876544 is an OCR error for X1Z9876544 (which has check digit '4')
+    let line1 = b"PPUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<";
+    let line2 = b"XIZ9876544UTO7408122F1204159ZE184226B<<<<<10";
+
+    let result = parse_any(&[line1, line2]);
+    assert!(
+        matches!(
+            result,
+            Err(MRZParseError::InvalidChecksumField(
+                MRZChecksumError::DocumentNumber
+            ))
+        ),
+        "Expected InvalidChecksumField(DocumentNumber) with I->1 OCR error, got {:?}",
+        result
+    );
 }

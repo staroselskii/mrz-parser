@@ -1,6 +1,6 @@
-use mrz_core::{MrzIcaoCommonFields};
+use mrz_core::MrzIcaoCommonFields;
 
-use mrz_core::{MRZParseError, MRZChecksumError};
+use mrz_core::{MRZChecksumError, MRZParseError};
 
 pub fn validate_common_fields(raw: &impl MrzIcaoCommonFields) -> Result<(), MRZParseError> {
     if !raw.is_document_number_valid() {

@@ -24,10 +24,7 @@ fn normalize_lines(lines: &[&str]) -> Vec<Vec<u8>> {
         .collect()
 }
 
-fn build_mrz_result<T: MrzIcaoCommonFields>(
-    raw: &T,
-    format: &str,
-) -> Result<MRZ, MRZParseError> {
+fn build_mrz_result<T: MrzIcaoCommonFields>(raw: &T, format: &str) -> Result<MRZ, MRZParseError> {
     let birth_date_bytes = raw.birth_date();
     let expiry_date_bytes = raw.expiry_date();
     Ok(MRZ::Icao(crate::model::MrzIcaoUnified::from_common_fields(
