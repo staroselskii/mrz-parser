@@ -71,6 +71,21 @@ pub trait MrzIcaoCommonFields {
     fn issuing_state(&self) -> &[u8; ICAO_COMMON_COUNTRY_CODE_LEN];
     /// Returns the nationality as a 3-character country code.
     fn nationality(&self) -> &[u8; ICAO_COMMON_COUNTRY_CODE_LEN];
+
+    /// Returns the document code (e.g., "P<" for passport).
+    fn document_code(&self) -> &[u8; ICAO_COMMON_DOC_CODE_LEN];
+
+    /// Returns the raw name field (surname and given names joined by '<<').
+    fn raw_name(&self) -> &str;
+
+    /// Returns whether the final check digit is required and present.
+    fn has_final_check(&self) -> bool;
+
+    /// Returns optional data field 1.
+    fn optional_data1(&self) -> &str;
+
+    /// Returns optional data field 2.
+    fn optional_data2(&self) -> &str;
 }
 
 /// Parsed MRZ format variants.
@@ -217,6 +232,26 @@ impl<const NAME_LEN: usize, const OPT1_LEN: usize, const OPT2_LEN: usize> MrzIca
     }
     fn nationality(&self) -> &[u8; ICAO_COMMON_COUNTRY_CODE_LEN] {
         &self.nationality
+    }
+
+    fn document_code(&self) -> &[u8; ICAO_COMMON_DOC_CODE_LEN] {
+        &self.document_code
+    }
+
+    fn raw_name(&self) -> &str {
+        &self.name
+    }
+
+    fn has_final_check(&self) -> bool {
+        self.final_check_valid.is_some()
+    }
+
+    fn optional_data1(&self) -> &str {
+        &self.optional_data1
+    }
+
+    fn optional_data2(&self) -> &str {
+        &self.optional_data2
     }
 }
 

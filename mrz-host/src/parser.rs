@@ -1,6 +1,5 @@
 use crate::date::parse_mrz_date_with_reference;
-use crate::util::{parse_field, parse_str_field};
-use crate::validation::{validate_common_fields, validate_td1_fields};
+use crate::validation::validate_common_fields;
 use mrz_core::MrzIcaoCommonFields;
 
 use crate::MRZ;
@@ -25,51 +24,36 @@ fn normalize_lines(lines: &[&str]) -> Vec<Vec<u8>> {
         .collect()
 }
 
+fn build_mrz_result<T: MrzIcaoCommonFields>(
+    raw: &T,
+    format: &str,
+) -> Result<MRZ, MRZParseError> {
+    let birth_date_bytes = raw.birth_date();
+    let expiry_date_bytes = raw.expiry_date();
+    Ok(MRZ::Icao(crate::model::MrzIcaoUnified::from_common_fields(
+        raw,
+        format,
+        raw.surname().as_str(),
+        raw.given_names().as_str(),
+        parse_mrz_date_with_reference(birth_date_bytes, Some(expiry_date_bytes)),
+        parse_mrz_date_with_reference(expiry_date_bytes, None),
+        raw.sex() as char,
+    )))
+}
+
 pub fn parse_lines(lines: &[&str]) -> Result<MRZ, MRZParseError> {
     let normalized = normalize_lines(lines);
     let refs: Vec<&[u8]> = normalized.iter().map(|l| &l[..]).collect();
     let parsed = parse_any(&refs)?;
 
     match parsed {
-        ParsedMRZ::MrzIcaoTd3(raw) => {
-            validate_common_fields(&raw)?;
-            let birth_date_bytes = raw.birth_date();
-            let expiry_date_bytes = raw.expiry_date();
-            Ok(MRZ::Icao(crate::model::MrzIcaoUnified::new(
-                parse_str_field(raw.document_number()),
-                raw.surname().to_string(),
-                raw.given_names().to_string(),
-                parse_mrz_date_with_reference(birth_date_bytes, Some(expiry_date_bytes)),
-                parse_mrz_date_with_reference(expiry_date_bytes, None),
-                raw.sex() as char,
-                raw.optional_data1.to_string(),
-                raw.optional_data2.to_string(),
-                raw.is_final_check_valid(),
-                parse_field(&raw.nationality),
-                parse_field(&raw.issuing_state),
-                parse_field(&raw.document_code),
-                "TD3".to_string(),
-            )))
+        ParsedMRZ::MrzIcaoTd3(ref raw) => {
+            validate_common_fields(raw)?;
+            build_mrz_result(raw, "TD3")
         }
-        ParsedMRZ::MrzIcaoTd1(raw) => {
-            validate_td1_fields(&raw)?;
-            let birth_date_bytes = raw.birth_date();
-            let expiry_date_bytes = raw.expiry_date();
-            Ok(MRZ::Icao(crate::model::MrzIcaoUnified::new(
-                parse_str_field(raw.document_number()),
-                raw.surname().to_string(),
-                raw.given_names().to_string(),
-                parse_mrz_date_with_reference(birth_date_bytes, Some(expiry_date_bytes)),
-                parse_mrz_date_with_reference(expiry_date_bytes, None),
-                raw.sex() as char,
-                raw.optional_data1.to_string(),
-                raw.optional_data2.to_string(),
-                raw.is_final_check_valid(),
-                parse_field(&raw.nationality),
-                parse_field(&raw.issuing_state),
-                parse_field(&raw.document_code),
-                "TD1".to_string(),
-            )))
+        ParsedMRZ::MrzIcaoTd1(ref raw) => {
+            validate_common_fields(raw)?;
+            build_mrz_result(raw, "TD1")
         }
         ParsedMRZ::Unknown => Ok(MRZ::Unknown),
     }

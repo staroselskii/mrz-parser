@@ -1,7 +1,6 @@
 mod date;
 mod model;
 mod parser;
-mod util;
 mod validation;
 
 pub use date::parse_mrz_date_with_reference;
