@@ -1,6 +1,6 @@
 use crate::checksum::compute_checksum;
 use crate::{
-    MRZChecksumError, MRZFormat, MRZParseError, MrzIcaoTd3, ParsedMRZ,
+    CheckedField, MRZChecksumError, MRZFormat, MRZParseError, MrzIcaoTd3, ParsedMRZ,
     ICAO_COMMON_COUNTRY_CODE_LEN, ICAO_COMMON_DATE_LEN, ICAO_COMMON_DOC_NUM_MAX_LEN,
     ICAO_TD1_OPTIONAL1_MAX_LEN, ICAO_TD1_OPTIONAL2_MAX_LEN, ICAO_TD3_NAME_MAX_LEN,
     ICAO_TD3_OPTIONAL1_MAX_LEN, ICAO_TD3_OPTIONAL2_MAX_LEN,
@@ -13,14 +13,14 @@ fn parse_document_number<const N: usize>(
     start: usize,
     end: usize,
     check: usize,
-) -> Result<([u8; N], String<N>), MRZParseError> {
+) -> Result<CheckedField<String<N>>, MRZParseError> {
     let array = parse_checked_field::<N>(
         &line[start..end],
         line[check],
         MRZChecksumError::DocumentNumber,
     )?;
     let decoded = decode_range::<N>(&array);
-    Ok((array, decoded))
+    Ok(CheckedField::new(decoded, None))
 }
 
 fn parse_date<const N: usize>(
@@ -29,12 +29,12 @@ fn parse_date<const N: usize>(
     end: usize,
     check: usize,
     kind: MRZChecksumError,
-) -> Result<([u8; N], bool), MRZParseError> {
+) -> Result<CheckedField<[u8; N]>, MRZParseError> {
     let (date, valid) = checked_field::<N>(&line[start..end], line[check]);
     if !valid {
         Err(MRZParseError::InvalidChecksumField(kind))
     } else {
-        Ok((date, valid))
+        Ok(CheckedField::new(date, None))
     }
 }
 
@@ -192,15 +192,14 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> Result<ParsedMRZ, MRZParseError> {
     const NAME_START: usize = 5;
     const NAME_END: usize = 44;
 
-    let (doc_num_array, document_number) = parse_document_number::<ICAO_COMMON_DOC_NUM_MAX_LEN>(
+    let document_number = parse_document_number::<ICAO_COMMON_DOC_NUM_MAX_LEN>(
         line2,
         DOC_NUM_START,
         DOC_NUM_END,
         DOC_NUM_CHECK,
     )?;
-    let doc_valid = true;
 
-    let (birth_date, birth_valid) = parse_date::<ICAO_COMMON_DATE_LEN>(
+    let birth_date = parse_date::<ICAO_COMMON_DATE_LEN>(
         line2,
         BIRTH_DATE_START,
         BIRTH_DATE_END,
@@ -208,7 +207,7 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> Result<ParsedMRZ, MRZParseError> {
         MRZChecksumError::BirthDate,
     )?;
 
-    let (expiry_date, expiry_valid) = parse_date::<ICAO_COMMON_DATE_LEN>(
+    let expiry_date = parse_date::<ICAO_COMMON_DATE_LEN>(
         line2,
         EXPIRY_DATE_START,
         EXPIRY_DATE_END,
@@ -217,16 +216,28 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> Result<ParsedMRZ, MRZParseError> {
     )?;
 
     let final_check_char = line2.get(FINAL_CHECK_POS).copied().unwrap_or(b'<');
-    let final_check_valid = validate_final_check(
-        &[
-            &line2[DOC_NUM_START..=DOC_NUM_CHECK],
-            &line2[BIRTH_DATE_START..=BIRTH_DATE_CHECK],
-            &line2[EXPIRY_DATE_START..=EXPIRY_DATE_CHECK],
-            &line2[EXPIRY_DATE_CHECK + 1..=FINAL_CHECK_POS - 1],
-        ],
-        final_check_char,
-        MRZChecksumError::Final,
-    )?;
+    let final_check = if final_check_char == b'<' {
+        None
+    } else {
+        Some(CheckedField::new(
+            (),
+            match validate_final_check(
+                &[
+                    &line2[DOC_NUM_START..=DOC_NUM_CHECK],
+                    &line2[BIRTH_DATE_START..=BIRTH_DATE_CHECK],
+                    &line2[EXPIRY_DATE_START..=EXPIRY_DATE_CHECK],
+                    &line2[EXPIRY_DATE_CHECK + 1..=FINAL_CHECK_POS - 1],
+                ],
+                final_check_char,
+                MRZChecksumError::Final,
+            ) {
+                Ok(Some(true)) => None,
+                Ok(Some(false)) => Some(MRZChecksumError::Final),
+                Ok(None) => None,
+                Err(e) => return Err(e),
+            },
+        ))
+    };
 
     let raw_name = decode_range::<ICAO_TD3_NAME_MAX_LEN>(&line1[NAME_START..NAME_END]);
     let name = decode_mrz_td_name::<ICAO_TD3_NAME_MAX_LEN>(&raw_name);
@@ -243,12 +254,9 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> Result<ParsedMRZ, MRZParseError> {
         nationality: fixed_slice::<3>(&line2[15..18]),
         name,
         document_number,
-        document_number_check_valid: doc_valid,
         birth_date,
-        birth_date_check_valid: birth_valid,
         expiry_date,
-        expiry_date_check_valid: expiry_valid,
-        final_check_valid,
+        final_check,
         sex,
         optional_data1: optional_data1.clone(),
         optional_data2: optional_data2.clone(),
@@ -298,13 +306,12 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> Result<ParsedMRZ, MRZP
     let issuing_state =
         fixed_slice::<ICAO_COMMON_COUNTRY_CODE_LEN>(&line1[ISSUER_START..ISSUER_END]);
 
-    let (doc_num_array, document_number) = parse_document_number::<ICAO_COMMON_DOC_NUM_MAX_LEN>(
+    let document_number = parse_document_number::<ICAO_COMMON_DOC_NUM_MAX_LEN>(
         line1,
         DOC_NUM_START,
         DOC_NUM_END,
         DOC_NUM_CHECK,
     )?;
-    let doc_valid = true;
 
     let optional_data1 =
         decode_range::<ICAO_TD1_OPTIONAL1_MAX_LEN>(&line1[OPTIONAL1_START..OPTIONAL1_END]);
@@ -312,7 +319,7 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> Result<ParsedMRZ, MRZP
     let nationality =
         fixed_slice::<ICAO_COMMON_COUNTRY_CODE_LEN>(&line2[NATIONALITY_START..NATIONALITY_END]);
 
-    let (birth_date, birth_valid) = parse_date::<ICAO_COMMON_DATE_LEN>(
+    let birth_date = parse_date::<ICAO_COMMON_DATE_LEN>(
         line2,
         BIRTH_DATE_START,
         BIRTH_DATE_END,
@@ -322,7 +329,7 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> Result<ParsedMRZ, MRZP
 
     let sex = line2[SEX_POS];
 
-    let (expiry_date, expiry_valid) = parse_date::<ICAO_COMMON_DATE_LEN>(
+    let expiry_date = parse_date::<ICAO_COMMON_DATE_LEN>(
         line2,
         EXPIRY_DATE_START,
         EXPIRY_DATE_END,
@@ -334,20 +341,28 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> Result<ParsedMRZ, MRZP
         decode_range::<ICAO_TD1_OPTIONAL2_MAX_LEN>(&line2[OPTIONAL2_START..OPTIONAL2_END]);
 
     let final_check_char = line2.get(FINAL_CHECK_POS).copied().unwrap_or(b'<');
-    let final_check_valid = validate_final_check(
-        &[
-            &line1[DOC_NUM_START..OPTIONAL1_END],
-            &line2[BIRTH_DATE_START..=BIRTH_DATE_CHECK],
-            &line2[EXPIRY_DATE_START..=EXPIRY_DATE_CHECK],
-            &line2[OPTIONAL2_START..FINAL_CHECK_POS],
-        ],
-        final_check_char,
-        MRZChecksumError::Final,
-    )?;
-
-    if let Some(false) = final_check_valid {
-        return Err(MRZParseError::InvalidChecksumField(MRZChecksumError::Final));
-    }
+    let final_check = if final_check_char == b'<' {
+        None
+    } else {
+        Some(CheckedField::new(
+            (),
+            match validate_final_check(
+                &[
+                    &line1[DOC_NUM_START..OPTIONAL1_END],
+                    &line2[BIRTH_DATE_START..=BIRTH_DATE_CHECK],
+                    &line2[EXPIRY_DATE_START..=EXPIRY_DATE_CHECK],
+                    &line2[OPTIONAL2_START..FINAL_CHECK_POS],
+                ],
+                final_check_char,
+                MRZChecksumError::Final,
+            ) {
+                Ok(Some(true)) => None,
+                Ok(Some(false)) => Some(MRZChecksumError::Final),
+                Ok(None) => None,
+                Err(e) => return Err(e),
+            },
+        ))
+    };
 
     let raw_name = decode_range::<ICAO_TD1_NAME_MAX_LEN>(&line3[NAME_START..NAME_END]);
     let full_name = decode_mrz_td_name::<ICAO_TD1_NAME_MAX_LEN>(&raw_name);
@@ -360,12 +375,9 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> Result<ParsedMRZ, MRZP
         optional_data1: optional_data1.clone(),
         optional_data2: optional_data2.clone(),
         document_number,
-        document_number_check_valid: doc_valid,
         birth_date,
-        birth_date_check_valid: birth_valid,
         expiry_date,
-        expiry_date_check_valid: expiry_valid,
-        final_check_valid,
+        final_check,
         sex,
     }))
 }

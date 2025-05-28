@@ -6,11 +6,16 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+use checked_field::CheckedField;
 use heapless::String;
 use heapless::Vec;
 
+/// Checked field types for MRZ data.
+pub mod checked_field;
 /// MRZ checksum validation utilities.
 pub mod checksum;
+/// OCR (Optical Character Recognition) utilities for MRZ data.
+pub mod ocr;
 /// MRZ format parsing utilities and functions.
 pub mod parser;
 
@@ -140,19 +145,13 @@ pub struct MrzIcao<const NAME_LEN: usize, const OPT1_LEN: usize, const OPT2_LEN:
     /// Sex character ('M', 'F', or '<').
     pub sex: u8,
     /// Document number.
-    pub document_number: String<ICAO_COMMON_DOC_NUM_MAX_LEN>,
-    /// Whether the document number passed checksum validation.
-    pub document_number_check_valid: bool,
+    pub document_number: CheckedField<String<ICAO_COMMON_DOC_NUM_MAX_LEN>>,
     /// Date of birth (YYMMDD).
-    pub birth_date: [u8; ICAO_COMMON_DATE_LEN],
-    /// Whether the birth date passed checksum validation.
-    pub birth_date_check_valid: bool,
+    pub birth_date: CheckedField<[u8; ICAO_COMMON_DATE_LEN]>,
     /// Expiry date (YYMMDD).
-    pub expiry_date: [u8; ICAO_COMMON_DATE_LEN],
-    /// Whether the expiry date passed checksum validation.
-    pub expiry_date_check_valid: bool,
+    pub expiry_date: CheckedField<[u8; ICAO_COMMON_DATE_LEN]>,
     /// Whether the final check digit passed validation, if applicable.
-    pub final_check_valid: Option<bool>,
+    pub final_check: Option<CheckedField<()>>,
     /// First optional data field.
     pub optional_data1: String<OPT1_LEN>,
     /// Second optional data field.
@@ -168,8 +167,8 @@ impl<const NAME_LEN: usize, const OPT1_LEN: usize, const OPT2_LEN: usize> core::
     for MrzIcao<NAME_LEN, OPT1_LEN, OPT2_LEN>
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let birth = core::str::from_utf8(&self.birth_date).unwrap_or("??");
-        let expiry = core::str::from_utf8(&self.expiry_date).unwrap_or("??");
+        let birth = core::str::from_utf8(self.birth_date.value()).unwrap_or("??");
+        let expiry = core::str::from_utf8(self.expiry_date.value()).unwrap_or("??");
 
         f.debug_struct("MrzIcao")
             .field("document_code", &self.document_code)
@@ -182,13 +181,16 @@ impl<const NAME_LEN: usize, const OPT1_LEN: usize, const OPT2_LEN: usize> core::
             .field("document_number", &self.document_number)
             .field(
                 "document_number_check_valid",
-                &self.document_number_check_valid,
+                &self.document_number.is_valid(),
             )
             .field("birth_date", &birth)
-            .field("birth_date_check_valid", &self.birth_date_check_valid)
+            .field("birth_date_check_valid", &self.birth_date.is_valid())
             .field("expiry_date", &expiry)
-            .field("expiry_date_check_valid", &self.expiry_date_check_valid)
-            .field("final_check_valid", &self.final_check_valid)
+            .field("expiry_date_check_valid", &self.expiry_date.is_valid())
+            .field(
+                "final_check_valid",
+                &self.final_check.as_ref().map(|c| c.is_valid()),
+            )
             .field("optional_data1", &self.optional_data1)
             .field("optional_data2", &self.optional_data2)
             .finish()
@@ -202,25 +204,25 @@ impl<const NAME_LEN: usize, const OPT1_LEN: usize, const OPT2_LEN: usize> MrzIca
         self.sex
     }
     fn document_number(&self) -> &str {
-        &self.document_number
+        &self.document_number.value()
     }
     fn birth_date(&self) -> &[u8; ICAO_COMMON_DATE_LEN] {
-        &self.birth_date
+        &self.birth_date.value()
     }
     fn expiry_date(&self) -> &[u8; ICAO_COMMON_DATE_LEN] {
-        &self.expiry_date
+        &self.expiry_date.value()
     }
     fn is_document_number_valid(&self) -> bool {
-        self.document_number_check_valid
+        self.document_number.is_valid()
     }
     fn is_birth_date_valid(&self) -> bool {
-        self.birth_date_check_valid
+        self.birth_date.is_valid()
     }
     fn is_expiry_date_valid(&self) -> bool {
-        self.expiry_date_check_valid
+        self.expiry_date.is_valid()
     }
     fn is_final_check_valid(&self) -> Option<bool> {
-        self.final_check_valid
+        self.final_check.as_ref().map(|c| c.is_valid())
     }
 
     fn surname(&self) -> String<ICAO_TD3_NAME_MAX_LEN> {
@@ -245,7 +247,7 @@ impl<const NAME_LEN: usize, const OPT1_LEN: usize, const OPT2_LEN: usize> MrzIca
     }
 
     fn has_final_check(&self) -> bool {
-        self.final_check_valid.is_some()
+        self.final_check.is_some()
     }
 
     fn optional_data1(&self) -> &str {
@@ -297,7 +299,7 @@ pub enum MRZParseError {
 }
 
 /// MRZ checksum validation error types.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum MRZChecksumError {
     /// Document number checksum failed.
     DocumentNumber,
