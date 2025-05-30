@@ -78,14 +78,6 @@ impl<T> CheckedField<T> {
             error: self.error.map(|e| f(e).into()),
         }
     }
-
-    /// Returns the inner value as a byte slice if the value type supports it.
-    pub fn as_bytes(&self) -> &[u8]
-    where
-        T: AsRef<[u8]>,
-    {
-        self.value.as_ref()
-    }
 }
 
 impl<T: core::fmt::Display> core::fmt::Display for CheckedField<T> {

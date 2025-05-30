@@ -158,10 +158,16 @@ fn test_td1_with_ocr_error_in_birth_date() {
     let lines_ref: [&[u8]; 3] = [&lines[0][..], &lines[1][..], &lines[2][..]];
     let result = parse_any(&lines_ref);
     assert!(
-        matches!(result, Err(MRZParseError::InvalidChecksumField(_))),
-        "Expected checksum error due to OCR issue, got {:?}",
+        matches!(result, Ok(ParsedMRZ::MrzIcaoTd1(_))),
+        "Expected successful parse with corrected birth date OCR error, got {:?}",
         result
     );
+    if let Ok(ParsedMRZ::MrzIcaoTd1(mrz)) = result {
+        assert!(
+            mrz.is_birth_date_valid(),
+            "Birth date should have been corrected"
+        );
+    }
 }
 
 #[test]
@@ -201,8 +207,14 @@ fn test_td1_with_ocr_error_in_expiry_date() {
     let lines_ref = [&lines[0][..], &lines[1][..], &lines[2][..]];
     let result = parse_any(&lines_ref);
     assert!(
-        matches!(result, Err(MRZParseError::InvalidChecksumField(_))),
-        "Expected checksum error due to OCR issue, got {:?}",
+        matches!(result, Ok(ParsedMRZ::MrzIcaoTd1(_))),
+        "Expected successful parse due to correctable OCR error, got {:?}",
         result
     );
+    if let Ok(ParsedMRZ::MrzIcaoTd1(mrz)) = result {
+        assert!(
+            mrz.is_expiry_date_valid(),
+            "Expiry date should have been corrected"
+        );
+    }
 }

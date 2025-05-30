@@ -4,6 +4,7 @@ use crate::ocr::ocr_permutations;
 use crate::{MRZChecksumError, MRZParseError};
 
 use core::str::FromStr;
+use heapless::String;
 
 /// Tries to correct a field with OCR permutations until the checksum is valid.
 ///

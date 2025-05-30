@@ -122,15 +122,22 @@ fn test_td3_with_ocr_error_in_expiry_date() {
 
     let result = parse_any(&[line1, line2]);
     assert!(
-        matches!(
-            result,
-            Err(MRZParseError::InvalidChecksumField(
-                MRZChecksumError::ExpiryDate
-            ))
-        ),
-        "Expected InvalidChecksumField(ExpiryDate), got {:?}",
+        matches!(result, Ok(ParsedMRZ::MrzIcaoTd3(_))),
+        "Expected successful parse with corrected expiry date OCR error, got {:?}",
         result
     );
+    if let Ok(ParsedMRZ::MrzIcaoTd3(mrz)) = result {
+        assert_eq!(mrz.expiry_date(), b"120415");
+        assert!(
+            mrz.is_expiry_date_valid(),
+            "Expiry date should be valid after correction"
+        );
+        assert_eq!(
+            mrz.is_final_check_valid(),
+            Some(true),
+            "Final check digit should be valid"
+        );
+    }
 }
 #[test]
 fn test_td3_with_common_ocr_errors_in_document_number() {
