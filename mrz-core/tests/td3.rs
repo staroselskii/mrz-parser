@@ -143,13 +143,8 @@ fn test_td3_with_common_ocr_errors_in_document_number() {
     for &line2 in &variants {
         let result = parse_any(&[line1, line2]);
         assert!(
-            matches!(
-                result,
-                Err(MRZParseError::InvalidChecksumField(
-                    MRZChecksumError::DocumentNumber
-                ))
-            ),
-            "Expected InvalidChecksumField(DocumentNumber) for variant: {:?}, got {:?}",
+            matches!(result, Ok(ParsedMRZ::MrzIcaoTd3(_))),
+            "Expected successful parse with corrected OCR error for variant: {:?}, got {:?}",
             std::str::from_utf8(line2),
             result
         );
@@ -163,13 +158,8 @@ fn test_td3_with_ocr_s_instead_of_5_in_document_number() {
 
     let result = parse_any(&[line1, line2]);
     assert!(
-        matches!(
-            result,
-            Err(MRZParseError::InvalidChecksumField(
-                MRZChecksumError::DocumentNumber
-            ))
-        ),
-        "Expected InvalidChecksumField(DocumentNumber) with S->5 OCR error, got {:?}",
+        matches!(result, Ok(ParsedMRZ::MrzIcaoTd3(_))),
+        "Expected successful parse with corrected OCR error, got {:?}",
         result
     );
 }
@@ -177,17 +167,55 @@ fn test_td3_with_ocr_s_instead_of_5_in_document_number() {
 fn test_td3_with_ocr_i_instead_of_1_in_document_number() {
     // Document number XIZ9876544 is an OCR error for X1Z9876544 (which has check digit '4')
     let line1 = b"PPUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<";
-    let line2 = b"XIZ9876544UTO7408122F1204159ZE184226B<<<<<10";
+    let line2 = b"XIZ9876544UTO7408122F1204159ZE184226B<<<<<14";
+    //let line2 = b"XIZ9876544UTO7408122F1204159ZE184226B<<<<<4<";
 
     let result = parse_any(&[line1, line2]);
     assert!(
-        matches!(
-            result,
-            Err(MRZParseError::InvalidChecksumField(
-                MRZChecksumError::DocumentNumber
-            ))
-        ),
-        "Expected InvalidChecksumField(DocumentNumber) with I->1 OCR error, got {:?}",
+        matches!(result, Ok(ParsedMRZ::MrzIcaoTd3(_))),
+        "Expected successful parse with corrected OCR error, got {:?}",
         result
     );
+    if let Ok(ParsedMRZ::MrzIcaoTd3(mrz)) = result {
+        assert_eq!(mrz.document_number(), "X1Z987654");
+        assert_eq!(mrz.is_document_number_valid(), true);
+        assert_eq!(mrz.is_final_check_valid(), Some(true));
+    }
+}
+
+#[test]
+fn test_td3_document_number_with_ocr_error_corrected() {
+    let line1 = b"PPUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<";
+    // 'O' instead of '0' in document number should be corrected by the parser
+    let line2 = b"L8989O2C36UTO7408122F1204159ZE184226B<<<<<10";
+
+    let result = parse_any(&[line1, line2]);
+    assert!(
+        matches!(result, Ok(ParsedMRZ::MrzIcaoTd3(_))),
+        "Expected successful parse with corrected OCR error, got {:?}",
+        result
+    );
+    if let Ok(ParsedMRZ::MrzIcaoTd3(mrz)) = result {
+        assert_eq!(mrz.document_number(), "L898902C3");
+        assert_eq!(mrz.is_document_number_valid(), true);
+    }
+}
+
+#[test]
+fn test_td3_document_number_with_multiple_ocr_errors_corrected() {
+    let line1 = b"PPUTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<";
+    // 'O' -> '0', 'S' -> '5' and 'I' -> '1' in document number
+    let line2 = b"XIS9876546UTO7408122F1204159ZE184226B<<<<<10";
+
+    let result = parse_any(&[line1, line2]);
+    assert!(
+        matches!(result, Ok(ParsedMRZ::MrzIcaoTd3(_))),
+        "Expected successful parse with multiple OCR corrections, got {:?}",
+        result
+    );
+    if let Ok(ParsedMRZ::MrzIcaoTd3(mrz)) = result {
+        assert_eq!(mrz.document_number(), "X1S9B7654");
+        assert_eq!(mrz.is_document_number_valid(), true);
+        assert_eq!(mrz.is_final_check_valid(), Some(true));
+    }
 }

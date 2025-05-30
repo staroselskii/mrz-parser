@@ -1,4 +1,5 @@
 use crate::checksum::compute_checksum;
+use crate::field_correction::correct_checked_field;
 use crate::{
     CheckedField, MRZChecksumError, MRZFormat, MRZParseError, MrzIcaoTd3, ParsedMRZ,
     ICAO_COMMON_COUNTRY_CODE_LEN, ICAO_COMMON_DATE_LEN, ICAO_COMMON_DOC_NUM_MAX_LEN,
@@ -8,19 +9,36 @@ use crate::{
 use core::fmt::Write;
 use heapless::String;
 
+// Maximum number of permutations to try for field correction.
+const MAX_FIELD_PERMUTATIONS: usize = 8;
+
 fn parse_document_number<const N: usize>(
     line: &[u8],
     start: usize,
     end: usize,
     check: usize,
 ) -> Result<CheckedField<String<N>>, MRZParseError> {
-    let array = parse_checked_field::<N>(
-        &line[start..end],
-        line[check],
+    let field_str =
+        core::str::from_utf8(&line[start..end]).map_err(|_| MRZParseError::Utf8Error)?;
+    let check_char = line[check] as char;
+
+    // Try checksum directly first
+    let raw_bytes = field_str.as_bytes();
+    if verify_checksum(raw_bytes, check_char as u8) {
+        let mut buf = String::new();
+        for &b in raw_bytes {
+            let _ = buf.push(b as char);
+        }
+        return Ok(CheckedField::new(buf, None));
+    }
+
+    // If checksum is invalid, try correction
+    correct_checked_field::<N, MAX_FIELD_PERMUTATIONS, String<N>>(
+        field_str,
+        check_char,
+        MAX_FIELD_PERMUTATIONS,
         MRZChecksumError::DocumentNumber,
-    )?;
-    let decoded = decode_range::<N>(&array);
-    Ok(CheckedField::new(decoded, None))
+    )
 }
 
 fn parse_date<const N: usize>(
@@ -57,12 +75,12 @@ fn parse_checked_field<const N: usize>(
     field: &[u8],
     check: u8,
     kind: MRZChecksumError,
-) -> Result<[u8; N], MRZParseError> {
+) -> Result<CheckedField<[u8; N]>, MRZParseError> {
     let (data, valid) = checked_field::<N>(field, check);
     if !valid {
         Err(MRZParseError::InvalidChecksumField(kind))
     } else {
-        Ok(data)
+        Ok(CheckedField::new(data, None))
     }
 }
 
@@ -79,7 +97,8 @@ fn compute_composite_checksum<'a>(segments: &[&'a [u8]], check_digit: u8) -> Opt
         for segment in segments {
             final_check_data.extend_from_slice(segment).ok()?;
         }
-        compute_checksum(&final_check_data).map(|csum| csum == (check_digit - b'0'))
+        let checksum = compute_checksum(&final_check_data);
+        return checksum.map(|csum| csum == (check_digit - b'0'));
     } else {
         None
     }
@@ -219,18 +238,20 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> Result<ParsedMRZ, MRZParseError> {
     let final_check = if final_check_char == b'<' {
         None
     } else {
+        let mut docnum_with_check = [0u8; 10];
+        docnum_with_check[..ICAO_COMMON_DOC_NUM_MAX_LEN]
+            .copy_from_slice(document_number.value().as_bytes());
+        docnum_with_check[ICAO_COMMON_DOC_NUM_MAX_LEN] = line2[DOC_NUM_CHECK];
+
+        let segments = &[
+            &docnum_with_check,
+            &line2[BIRTH_DATE_START..=BIRTH_DATE_CHECK],
+            &line2[EXPIRY_DATE_START..=EXPIRY_DATE_CHECK],
+            &line2[EXPIRY_DATE_CHECK + 1..=FINAL_CHECK_POS - 1],
+        ];
         Some(CheckedField::new(
             (),
-            match validate_final_check(
-                &[
-                    &line2[DOC_NUM_START..=DOC_NUM_CHECK],
-                    &line2[BIRTH_DATE_START..=BIRTH_DATE_CHECK],
-                    &line2[EXPIRY_DATE_START..=EXPIRY_DATE_CHECK],
-                    &line2[EXPIRY_DATE_CHECK + 1..=FINAL_CHECK_POS - 1],
-                ],
-                final_check_char,
-                MRZChecksumError::Final,
-            ) {
+            match validate_final_check(segments, final_check_char, MRZChecksumError::Final) {
                 Ok(Some(true)) => None,
                 Ok(Some(false)) => Some(MRZChecksumError::Final),
                 Ok(None) => None,
@@ -344,18 +365,20 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> Result<ParsedMRZ, MRZP
     let final_check = if final_check_char == b'<' {
         None
     } else {
+        let mut docnum_with_check = [0u8; 10];
+        docnum_with_check[..ICAO_COMMON_DOC_NUM_MAX_LEN]
+            .copy_from_slice(document_number.value().as_bytes());
+        docnum_with_check[ICAO_COMMON_DOC_NUM_MAX_LEN] = line1[DOC_NUM_CHECK];
+
+        let segments = &[
+            &docnum_with_check,
+            &line2[BIRTH_DATE_START..=BIRTH_DATE_CHECK],
+            &line2[EXPIRY_DATE_START..=EXPIRY_DATE_CHECK],
+            &line2[OPTIONAL2_START..FINAL_CHECK_POS],
+        ];
         Some(CheckedField::new(
             (),
-            match validate_final_check(
-                &[
-                    &line1[DOC_NUM_START..OPTIONAL1_END],
-                    &line2[BIRTH_DATE_START..=BIRTH_DATE_CHECK],
-                    &line2[EXPIRY_DATE_START..=EXPIRY_DATE_CHECK],
-                    &line2[OPTIONAL2_START..FINAL_CHECK_POS],
-                ],
-                final_check_char,
-                MRZChecksumError::Final,
-            ) {
+            match validate_final_check(segments, final_check_char, MRZChecksumError::Final) {
                 Ok(Some(true)) => None,
                 Ok(Some(false)) => Some(MRZChecksumError::Final),
                 Ok(None) => None,

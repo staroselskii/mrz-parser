@@ -2,7 +2,7 @@
 //!
 //! This crate provides core data structures and utilities for parsing ICAO-compliant MRZ formats,
 //! including TD1 and TD3. It is designed to be `no_std` compatible and safe for embedded and MCU use.
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
@@ -14,6 +14,8 @@ use heapless::Vec;
 pub mod checked_field;
 /// MRZ checksum validation utilities.
 pub mod checksum;
+/// MRZ field correction utilities for handling OCR errors and substitutions.
+pub mod field_correction;
 /// OCR (Optical Character Recognition) utilities for MRZ data.
 pub mod ocr;
 /// MRZ format parsing utilities and functions.
@@ -296,6 +298,24 @@ pub enum MRZParseError {
     UnsupportedFormat,
     /// UTF-8 decoding error occurred.
     Utf8Error,
+}
+
+impl MRZParseError {
+    /// Creates an `MRZParseError` from a given `MRZChecksumError`.
+    ///
+    /// This is a convenience function for converting a checksum error
+    /// into a more general MRZ parse error.
+    ///
+    /// # Arguments
+    ///
+    /// * `e` - The checksum error to convert.
+    ///
+    /// # Returns
+    ///
+    /// An `MRZParseError::InvalidChecksumField` variant containing the provided error.
+    pub fn from_checksum(e: MRZChecksumError) -> Self {
+        MRZParseError::InvalidChecksumField(e)
+    }
 }
 
 /// MRZ checksum validation error types.

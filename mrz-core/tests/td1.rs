@@ -126,8 +126,8 @@ fn test_td1_document_number_with_ocr_substitution_o_instead_of_0() {
     let lines_ref: [&[u8]; 3] = [&lines[0][..], &lines[1][..], &lines[2][..]];
     let result = parse_any(&lines_ref);
     assert!(
-        matches!(result, Err(MRZParseError::InvalidChecksumField(_))),
-        "Expected checksum error due to OCR issue, got {:?}",
+        result.is_ok(),
+        "Expected successful parse with corrected OCR error, got {:?}",
         result
     );
 }
@@ -142,8 +142,8 @@ fn test_td1_document_number_with_ocr_substitution_5_instead_of_s() {
     let lines_ref: [&[u8]; 3] = [&lines[0][..], &lines[1][..], &lines[2][..]];
     let result = parse_any(&lines_ref);
     assert!(
-        matches!(result, Err(MRZParseError::InvalidChecksumField(_))),
-        "Expected checksum error due to OCR issue, got {:?}",
+        result.is_ok(),
+        "Expected successful parse with corrected OCR error, got {:?}",
         result
     );
 }

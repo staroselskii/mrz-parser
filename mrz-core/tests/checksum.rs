@@ -72,3 +72,7 @@ fn test_field_level_checksums() {
     // Composite checksum over fields
     assert_checksum_matches(b"L898902C37408121204159ZE184226B1", 0);
 }
+#[test]
+fn sanity_check_document_number_checksum() {
+    assert_checksum_matches(b"D23145890", 7);
+}
