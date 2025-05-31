@@ -12,17 +12,23 @@ use crate::MRZChecksumError;
 pub struct CheckedField<T> {
     value: T,
     error: Option<MRZChecksumError>,
+    check_digit: Option<u8>,
 }
 
 impl<T> CheckedField<T> {
-    /// Creates a new `CheckedField` with a value and an optional checksum error.
-    pub fn new(value: T, error: Option<MRZChecksumError>) -> Self {
-        CheckedField { value, error }
-    }
-
-    /// Creates a new `CheckedField` with a value and no checksum error.
-    pub fn new_valid(value: T) -> Self {
-        CheckedField { value, error: None }
+    /// Creates a new `CheckedField` with a value, an optional checksum error, and a raw check digit character.
+    /// If the raw check character is b'&lt;', the check digit is set to None.
+    pub fn new(value: T, error: Option<MRZChecksumError>, raw_check_char: u8) -> Self {
+        let check_digit = if raw_check_char == b'<' {
+            None
+        } else {
+            Some(raw_check_char)
+        };
+        CheckedField {
+            value,
+            error,
+            check_digit,
+        }
     }
 
     /// Returns `true` if the field is valid (i.e. has no checksum error).
@@ -46,11 +52,12 @@ impl<T> CheckedField<T> {
     }
 
     /// Transforms the inner value using the given function,
-    /// preserving the existing checksum error (if any).
+    /// preserving the existing checksum error (if any) and check digit.
     pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> CheckedField<U> {
         CheckedField {
             value: f(self.value),
             error: self.error,
+            check_digit: self.check_digit,
         }
     }
 
@@ -64,10 +71,11 @@ impl<T> CheckedField<T> {
         CheckedField {
             value: &self.value,
             error: self.error.clone(),
+            check_digit: self.check_digit,
         }
     }
 
-    /// Maps the checksum error using the given function, preserving the value.
+    /// Maps the checksum error using the given function, preserving the value and check digit.
     pub fn map_error<F, E>(self, f: F) -> CheckedField<T>
     where
         F: FnOnce(MRZChecksumError) -> E,
@@ -76,7 +84,50 @@ impl<T> CheckedField<T> {
         CheckedField {
             value: self.value,
             error: self.error.map(|e| f(e).into()),
+            check_digit: self.check_digit,
         }
+    }
+
+    /// Returns the check digit, if any.
+    pub fn check_digit(&self) -> Option<u8> {
+        self.check_digit
+    }
+
+    /// Sets the check digit.
+    pub fn set_check_digit(&mut self, digit: u8) {
+        self.check_digit = Some(digit);
+    }
+}
+
+impl<const N: usize> CheckedField<[u8; N]> {
+    /// Returns the length of value plus one for the check digit.
+    pub const fn len_with_check() -> usize {
+        N + 1
+    }
+
+    /// Returns the value bytes combined with the check digit as a heapless::Vec<u8>.
+    pub fn as_slice_with_check(&self) -> heapless::Vec<u8, 32> {
+        let mut result = heapless::Vec::<u8, 32>::new();
+        dbg!(&self.check_digit);
+        result.extend_from_slice(&self.value).ok();
+        result.push(self.check_digit.unwrap_or(b'<')).ok();
+        result
+    }
+}
+
+impl<const N: usize> CheckedField<heapless::String<N>> {
+    /// Returns the length of value plus one for the check digit.
+    pub const fn len_with_check() -> usize {
+        N + 1
+    }
+
+    /// Returns the value bytes combined with the check digit as a heapless::Vec<u8>.
+    pub fn as_slice_with_check(&self) -> heapless::Vec<u8, 32> {
+        let mut result = heapless::Vec::<u8, 32>::new();
+        dbg!(&self.check_digit);
+        result.extend_from_slice(self.value.as_bytes()).ok();
+        result.push(self.check_digit.unwrap_or(b'<')).ok();
+        result
     }
 }
 

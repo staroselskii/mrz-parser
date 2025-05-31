@@ -29,7 +29,11 @@ fn parse_checked_field_with_correction<const N: usize>(
     let corrected = parse_correctable_checked_field::<N, String<N>>(field_str, check_char, kind)?;
 
     let array = corrected.value().as_bytes().try_into().unwrap_or([b'0'; N]);
-    Ok(CheckedField::new(array, corrected.error().cloned()))
+    Ok(CheckedField::new(
+        array,
+        corrected.error().cloned(),
+        check_char as u8,
+    ))
 }
 
 fn parse_correctable_checked_field<const N: usize, T>(
@@ -46,7 +50,7 @@ where
         let parsed: T = field_str
             .parse()
             .map_err(|_| MRZParseError::from_checksum(kind))?;
-        return Ok(CheckedField::new(parsed, None));
+        return Ok(CheckedField::new(parsed, None, check_char as u8));
     }
 
     correct_checked_field::<N, MAX_FIELD_PERMUTATIONS, T>(
@@ -225,18 +229,9 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> Result<ParsedMRZ, MRZParseError> {
     let final_check = if final_check_char == b'<' {
         None
     } else {
-        let mut docnum_with_check = [0u8; 10];
-        docnum_with_check[..ICAO_COMMON_DOC_NUM_MAX_LEN]
-            .copy_from_slice(document_number.value().as_ref());
-        docnum_with_check[ICAO_COMMON_DOC_NUM_MAX_LEN] = line2[DOC_NUM_CHECK];
-
-        let mut birth_date_with_check = [b'<'; 10];
-        birth_date_with_check[..ICAO_COMMON_DATE_LEN].copy_from_slice(birth_date.value());
-        birth_date_with_check[ICAO_COMMON_DATE_LEN] = line2[BIRTH_DATE_CHECK];
-
-        let mut expiry_date_with_check = [b'<'; 10];
-        expiry_date_with_check[..ICAO_COMMON_DATE_LEN].copy_from_slice(expiry_date.value());
-        expiry_date_with_check[ICAO_COMMON_DATE_LEN] = line2[EXPIRY_DATE_CHECK];
+        let docnum_with_check = document_number.as_slice_with_check();
+        let birth_date_with_check = birth_date.as_slice_with_check();
+        let expiry_date_with_check = expiry_date.as_slice_with_check();
 
         let segments = &[
             &docnum_with_check,
@@ -252,6 +247,7 @@ fn parse_td3(line1: &[u8], line2: &[u8]) -> Result<ParsedMRZ, MRZParseError> {
                 Ok(None) => None,
                 Err(e) => return Err(e),
             },
+            final_check_char,
         ))
     };
 
@@ -366,18 +362,9 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> Result<ParsedMRZ, MRZP
     let final_check = if final_check_char == b'<' {
         None
     } else {
-        let mut docnum_with_check = [0u8; 10];
-        docnum_with_check[..ICAO_COMMON_DOC_NUM_MAX_LEN]
-            .copy_from_slice(document_number.value().as_ref());
-        docnum_with_check[ICAO_COMMON_DOC_NUM_MAX_LEN] = line1[DOC_NUM_CHECK];
-
-        let mut birth_date_with_check = [b'<'; 10];
-        birth_date_with_check[..ICAO_COMMON_DATE_LEN].copy_from_slice(birth_date.value());
-        birth_date_with_check[ICAO_COMMON_DATE_LEN] = line2[BIRTH_DATE_CHECK];
-
-        let mut expiry_date_with_check = [b'<'; 10];
-        expiry_date_with_check[..ICAO_COMMON_DATE_LEN].copy_from_slice(expiry_date.value());
-        expiry_date_with_check[ICAO_COMMON_DATE_LEN] = line2[EXPIRY_DATE_CHECK];
+        let docnum_with_check = document_number.as_slice_with_check();
+        let birth_date_with_check = birth_date.as_slice_with_check();
+        let expiry_date_with_check = expiry_date.as_slice_with_check();
 
         let segments = &[
             &docnum_with_check,
@@ -393,6 +380,7 @@ fn parse_td1(line1: &[u8], line2: &[u8], line3: &[u8]) -> Result<ParsedMRZ, MRZP
                 Ok(None) => None,
                 Err(e) => return Err(e),
             },
+            final_check_char,
         ))
     };
 

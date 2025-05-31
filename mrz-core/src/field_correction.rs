@@ -4,7 +4,6 @@ use crate::ocr::ocr_permutations;
 use crate::{MRZChecksumError, MRZParseError};
 
 use core::str::FromStr;
-use heapless::String;
 
 /// Tries to correct a field with OCR permutations until the checksum is valid.
 ///
@@ -40,7 +39,7 @@ where
     for p in permutations {
         if compute_checksum(p.as_bytes()) == Some(expected) {
             if let Ok(value) = T::from_str(&p) {
-                return Ok(CheckedField::new_valid(value));
+                return Ok(CheckedField::new(value, None, b'0' + expected));
             }
         }
     }
