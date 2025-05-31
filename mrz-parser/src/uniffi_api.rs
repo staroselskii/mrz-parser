@@ -24,8 +24,8 @@ use thiserror::Error;
 pub enum MrzParseError {
     #[error("The MRZ has an invalid length")]
     InvalidLength,
-    #[error("Checksum failed")]
-    InvalidChecksumField,
+    #[error("Checksum failed: {0}")]
+    InvalidChecksumField(String),
     #[error("Unknown format")]
     UnknownFormat,
     #[error("Unsupported format")]
@@ -40,7 +40,9 @@ pub fn parse_lines(lines: Vec<String>) -> Result<MrzResult, MrzParseError> {
     inner_parse_lines(&strs)
         .map_err(|e| match e {
             mrz_core::MRZParseError::InvalidLength => MrzParseError::InvalidLength,
-            mrz_core::MRZParseError::InvalidChecksumField(_) => MrzParseError::InvalidChecksumField,
+            mrz_core::MRZParseError::InvalidChecksumField(inner) => {
+                MrzParseError::InvalidChecksumField(format!("{:?}", inner))
+            }
             mrz_core::MRZParseError::UnknownFormat => MrzParseError::UnknownFormat,
             mrz_core::MRZParseError::UnsupportedFormat => MrzParseError::UnsupportedFormat,
             mrz_core::MRZParseError::Utf8Error => MrzParseError::Utf8Error,
